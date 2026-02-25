@@ -467,7 +467,7 @@ func TestClientVerificationFailure(t *testing.T) {
 	
 	// Result should still be returned
 	if result == nil {
-		t.Error("Expected result even for failed verification")
+		t.Fatal("Expected result even for failed verification")
 	}
 	
 	if result.Verified {
