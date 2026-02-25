@@ -209,7 +209,7 @@ The library provides custom error types for different failure scenarios:
 
 ## Requirements
 
-- Go 1.21 or later
+- Go 1.22 or later
 - RSA-2048 private key (PEM or DER format)
 - No external dependencies (uses only Go standard library)
 
