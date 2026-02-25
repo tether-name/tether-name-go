@@ -1,3 +1,3 @@
-module github.com/Commit451/tether-name-go
+module github.com/tether-name/tether-name-go
 
 go 1.21

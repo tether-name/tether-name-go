@@ -1,7 +1,7 @@
 # tether-go
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/Commit451/tether-name-go.svg)](https://pkg.go.dev/github.com/Commit451/tether-name-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/Commit451/tether-name-go)](https://goreportcard.com/report/github.com/Commit451/tether-name-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/tether-name/tether-name-go.svg)](https://pkg.go.dev/github.com/tether-name/tether-name-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tether-name/tether-name-go)](https://goreportcard.com/report/github.com/tether-name/tether-name-go)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A Go client library for [Tether](https://tether.name) - cryptographic identity verification for AI agents. Tether lets AI agents prove their identity using RSA digital signatures, enabling secure verification of agent authenticity.
@@ -9,7 +9,7 @@ A Go client library for [Tether](https://tether.name) - cryptographic identity v
 ## Installation
 
 ```bash
-go get github.com/Commit451/tether-name-go
+go get github.com/tether-name/tether-name-go
 ```
 
 ## Quick Start
@@ -22,7 +22,7 @@ import (
     "fmt"
     "log"
     
-    "github.com/Commit451/tether-name-go"
+    "github.com/tether-name/tether-name-go"
 )
 
 func main() {
@@ -59,7 +59,7 @@ import (
     "fmt"
     "log"
     
-    "github.com/Commit451/tether-name-go"
+    "github.com/tether-name/tether-name-go"
 )
 
 func main() {
