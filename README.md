@@ -223,6 +223,23 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Publishing
+
+Go modules are published via git tags — no registry upload needed.
+
+### Version checklist
+
+Update the version in:
+
+1. `client.go` → `UserAgent` constant
+
+### Steps
+
+1. Update the UserAgent version string above
+2. Commit and push to `main`
+3. Tag the release: `git tag v1.0.0 && git push --tags`
+4. The module is immediately available via `go get github.com/tether-name/tether-name-go@v1.0.0`
+
 ## Links
 
 - 🌐 [Tether Website](https://tether.name)
