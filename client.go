@@ -23,46 +23,68 @@ const (
 type TetherClient struct {
 	credentialID string
 	privateKey   *rsa.PrivateKey
+	apiKey       string
 	baseURL      string
 	httpClient   *http.Client
 }
 
-// NewClient creates a new TetherClient with the given options
+// NewClient creates a new TetherClient with the given options.
+// When ApiKey is provided, credentialID and privateKey become optional
+// (only required for verify/sign operations).
 func NewClient(opts Options) (*TetherClient, error) {
+	// Get API key from options or environment
+	apiKey := opts.ApiKey
+	if apiKey == "" {
+		apiKey = os.Getenv("TETHER_API_KEY")
+	}
+
 	// Get credential ID from options or environment
 	credentialID := opts.CredentialID
 	if credentialID == "" {
 		credentialID = os.Getenv("TETHER_CREDENTIAL_ID")
 	}
-	if credentialID == "" {
+
+	// Without an API key, credential ID is required
+	if apiKey == "" && credentialID == "" {
 		return nil, &KeyLoadError{
 			Message: "credential ID is required",
 			Err:     ErrKeyLoad,
 		}
 	}
-	
-	// Handle private key path from environment if not provided
+
+	// Try to load private key (optional when apiKey is provided)
+	var privateKey *rsa.PrivateKey
 	optsWithEnv := opts
 	if optsWithEnv.PrivateKeyPath == "" && len(optsWithEnv.PrivateKeyPEM) == 0 && len(optsWithEnv.PrivateKeyDER) == 0 {
 		if envPath := os.Getenv("TETHER_PRIVATE_KEY_PATH"); envPath != "" {
 			optsWithEnv.PrivateKeyPath = envPath
 		}
 	}
-	
-	// Load private key
-	privateKey, err := loadPrivateKey(optsWithEnv)
-	if err != nil {
-		return nil, err
+
+	hasKeyMaterial := optsWithEnv.PrivateKeyPath != "" || len(optsWithEnv.PrivateKeyPEM) > 0 || len(optsWithEnv.PrivateKeyDER) > 0
+	if hasKeyMaterial {
+		key, err := loadPrivateKey(optsWithEnv)
+		if err != nil {
+			return nil, err
+		}
+		privateKey = key
+	} else if apiKey == "" {
+		// No API key and no key material — private key is required
+		return nil, &KeyLoadError{
+			Message: "private key is required (provide PrivateKeyPEM, PrivateKeyDER, or PrivateKeyPath)",
+			Err:     ErrKeyLoad,
+		}
 	}
-	
+
 	baseURL := opts.BaseURL
 	if baseURL == "" {
 		baseURL = DefaultBaseURL
 	}
-	
+
 	return &TetherClient{
 		credentialID: credentialID,
 		privateKey:   privateKey,
+		apiKey:       apiKey,
 		baseURL:      baseURL,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -145,8 +167,15 @@ func (c *TetherClient) RequestChallenge(ctx context.Context) (string, error) {
 	return challengeResp.Code, nil
 }
 
-// Sign signs a challenge using the client's private key
+// Sign signs a challenge using the client's private key.
+// Requires a private key to be configured.
 func (c *TetherClient) Sign(challenge string) (string, error) {
+	if c.privateKey == nil {
+		return "", &VerificationError{
+			Message: "private key is required for signing",
+			Err:     ErrVerification,
+		}
+	}
 	normalizedChallenge := normalizeChallenge(challenge)
 	proof, err := signChallenge(c.privateKey, normalizedChallenge)
 	if err != nil {
@@ -158,10 +187,18 @@ func (c *TetherClient) Sign(challenge string) (string, error) {
 	return proof, nil
 }
 
-// SubmitProof submits a signed challenge proof for verification
+// SubmitProof submits a signed challenge proof for verification.
+// Requires credentialID to be configured.
 func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string) (*VerificationResult, error) {
+	if c.credentialID == "" {
+		return nil, &APIError{
+			Message: "credential ID is required for verification",
+			Err:     ErrAPI,
+		}
+	}
+
 	url := c.baseURL + "/challenge/verify"
-	
+
 	verifyReq := verifyRequest{
 		Challenge:    normalizeChallenge(challenge),
 		Proof:        proof,
@@ -232,6 +269,191 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 			Err:     ErrVerification,
 		}
 	}
-	
+
 	return result, nil
+}
+
+// setAuthHeaders sets Authorization header on the request when an API key is configured.
+func (c *TetherClient) setAuthHeaders(req *http.Request) {
+	if c.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
+}
+
+// CreateCredential creates a new agent credential.
+// Requires an API key to be configured.
+func (c *TetherClient) CreateCredential(ctx context.Context, agentName string, description string) (*Credential, error) {
+	if c.apiKey == "" {
+		return nil, &APIError{
+			Message: "API key is required for credential management",
+			Err:     ErrAPI,
+		}
+	}
+
+	url := c.baseURL + "/credentials/issue"
+
+	issueReq := issueCredentialRequest{
+		AgentName:   agentName,
+		Description: description,
+	}
+
+	reqBody, err := json.Marshal(issueReq)
+	if err != nil {
+		return nil, &APIError{
+			Message: "failed to marshal request",
+			Err:     err,
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, &APIError{
+			Message: "failed to create request",
+			Err:     err,
+		}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &APIError{
+			Message: "request failed",
+			Err:     err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+			Err:        ErrAPI,
+		}
+	}
+
+	var issueResp issueCredentialResponse
+	if err := json.NewDecoder(resp.Body).Decode(&issueResp); err != nil {
+		return nil, &APIError{
+			Message: "failed to decode response",
+			Err:     err,
+		}
+	}
+
+	return &Credential{
+		ID:                issueResp.ID,
+		AgentName:         issueResp.AgentName,
+		Description:       issueResp.Description,
+		CreatedAt:         issueResp.CreatedAt,
+		RegistrationToken: issueResp.RegistrationToken,
+	}, nil
+}
+
+// ListCredentials lists all credentials for the authenticated user.
+// Requires an API key to be configured.
+func (c *TetherClient) ListCredentials(ctx context.Context) ([]Credential, error) {
+	if c.apiKey == "" {
+		return nil, &APIError{
+			Message: "API key is required for credential management",
+			Err:     ErrAPI,
+		}
+	}
+
+	url := c.baseURL + "/credentials"
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, &APIError{
+			Message: "failed to create request",
+			Err:     err,
+		}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &APIError{
+			Message: "request failed",
+			Err:     err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+			Err:        ErrAPI,
+		}
+	}
+
+	var entries []listCredentialEntry
+	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
+		return nil, &APIError{
+			Message: "failed to decode response",
+			Err:     err,
+		}
+	}
+
+	credentials := make([]Credential, len(entries))
+	for i, entry := range entries {
+		credentials[i] = Credential{
+			ID:             entry.ID,
+			AgentName:      entry.AgentName,
+			Description:    entry.Description,
+			CreatedAt:      entry.IssuedAt,
+			LastVerifiedAt: entry.LastVerifiedAt,
+		}
+	}
+
+	return credentials, nil
+}
+
+// DeleteCredential deletes a credential by ID.
+// Requires an API key to be configured.
+func (c *TetherClient) DeleteCredential(ctx context.Context, credentialID string) (bool, error) {
+	if c.apiKey == "" {
+		return false, &APIError{
+			Message: "API key is required for credential management",
+			Err:     ErrAPI,
+		}
+	}
+
+	url := c.baseURL + "/credentials/" + credentialID
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+	if err != nil {
+		return false, &APIError{
+			Message: "failed to create request",
+			Err:     err,
+		}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false, &APIError{
+			Message: "request failed",
+			Err:     err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+			Err:        ErrAPI,
+		}
+	}
+
+	return true, nil
 }

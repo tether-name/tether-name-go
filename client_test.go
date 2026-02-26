@@ -518,3 +518,333 @@ func TestClientContextCancellation(t *testing.T) {
 		t.Errorf("Expected context-related error, got: %v", err)
 	}
 }
+
+func TestNewClientWithApiKeyOnly(t *testing.T) {
+	// Should succeed with only an API key (no credential ID or private key)
+	client, err := NewClient(Options{
+		ApiKey: "test-api-key",
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if client.apiKey != "test-api-key" {
+		t.Errorf("Expected apiKey %q, got %q", "test-api-key", client.apiKey)
+	}
+
+	if client.credentialID != "" {
+		t.Errorf("Expected empty credentialID, got %q", client.credentialID)
+	}
+
+	if client.privateKey != nil {
+		t.Error("Expected nil privateKey")
+	}
+}
+
+func TestNewClientWithApiKeyAndCredential(t *testing.T) {
+	key, err := generateTestKeyPair()
+	if err != nil {
+		t.Fatalf("Failed to generate test key pair: %v", err)
+	}
+
+	client, err := NewClient(Options{
+		ApiKey:        "test-api-key",
+		CredentialID:  "test-credential",
+		PrivateKeyPEM: privateKeyToPEM(key),
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if client.apiKey != "test-api-key" {
+		t.Errorf("Expected apiKey %q, got %q", "test-api-key", client.apiKey)
+	}
+
+	if client.credentialID != "test-credential" {
+		t.Errorf("Expected credentialID %q, got %q", "test-credential", client.credentialID)
+	}
+
+	if client.privateKey == nil {
+		t.Error("Expected privateKey to be loaded")
+	}
+}
+
+func TestNewClientWithApiKeyEnvVar(t *testing.T) {
+	os.Setenv("TETHER_API_KEY", "env-api-key")
+	defer os.Unsetenv("TETHER_API_KEY")
+
+	client, err := NewClient(Options{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if client.apiKey != "env-api-key" {
+		t.Errorf("Expected apiKey %q, got %q", "env-api-key", client.apiKey)
+	}
+}
+
+func TestSignRequiresPrivateKey(t *testing.T) {
+	client := &TetherClient{
+		apiKey: "test-api-key",
+	}
+
+	_, err := client.Sign("test-challenge")
+	if err == nil {
+		t.Error("Expected error when signing without private key")
+	}
+
+	if !strings.Contains(err.Error(), "private key is required") {
+		t.Errorf("Expected 'private key is required' error, got: %v", err)
+	}
+}
+
+func TestSubmitProofRequiresCredentialID(t *testing.T) {
+	client := &TetherClient{
+		apiKey:     "test-api-key",
+		httpClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	ctx := context.Background()
+	_, err := client.SubmitProof(ctx, "challenge", "proof")
+	if err == nil {
+		t.Error("Expected error when submitting proof without credential ID")
+	}
+
+	if !strings.Contains(err.Error(), "credential ID is required") {
+		t.Errorf("Expected 'credential ID is required' error, got: %v", err)
+	}
+}
+
+func TestCreateCredential(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+
+		if r.URL.Path != "/credentials/issue" {
+			t.Errorf("Expected /credentials/issue path, got %s", r.URL.Path)
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "Bearer test-api-key" {
+			t.Errorf("Expected Authorization header %q, got %q", "Bearer test-api-key", authHeader)
+		}
+
+		var req issueCredentialRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("Failed to decode request: %v", err)
+		}
+
+		if req.AgentName != "my-agent" {
+			t.Errorf("Expected agentName %q, got %q", "my-agent", req.AgentName)
+		}
+
+		if req.Description != "Test agent" {
+			t.Errorf("Expected description %q, got %q", "Test agent", req.Description)
+		}
+
+		response := issueCredentialResponse{
+			ID:                "cred-123",
+			AgentName:         "my-agent",
+			Description:       "Test agent",
+			CreatedAt:         1700000000000,
+			RegistrationToken: "reg-token-abc",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &TetherClient{
+		apiKey:     "test-api-key",
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	ctx := context.Background()
+	cred, err := client.CreateCredential(ctx, "my-agent", "Test agent")
+	if err != nil {
+		t.Fatalf("Failed to create credential: %v", err)
+	}
+
+	if cred.ID != "cred-123" {
+		t.Errorf("Expected ID %q, got %q", "cred-123", cred.ID)
+	}
+
+	if cred.AgentName != "my-agent" {
+		t.Errorf("Expected AgentName %q, got %q", "my-agent", cred.AgentName)
+	}
+
+	if cred.RegistrationToken != "reg-token-abc" {
+		t.Errorf("Expected RegistrationToken %q, got %q", "reg-token-abc", cred.RegistrationToken)
+	}
+
+	if cred.CreatedAt != 1700000000000 {
+		t.Errorf("Expected CreatedAt %d, got %d", 1700000000000, cred.CreatedAt)
+	}
+}
+
+func TestListCredentials(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			t.Errorf("Expected GET request, got %s", r.Method)
+		}
+
+		if r.URL.Path != "/credentials" {
+			t.Errorf("Expected /credentials path, got %s", r.URL.Path)
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "Bearer test-api-key" {
+			t.Errorf("Expected Authorization header %q, got %q", "Bearer test-api-key", authHeader)
+		}
+
+		// API returns "issuedAt" instead of "createdAt"
+		response := `[
+			{"id":"cred-1","agentName":"agent-1","description":"First","issuedAt":1700000000000,"lastVerifiedAt":1700001000000},
+			{"id":"cred-2","agentName":"agent-2","description":"Second","issuedAt":1700002000000}
+		]`
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	client := &TetherClient{
+		apiKey:     "test-api-key",
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	ctx := context.Background()
+	creds, err := client.ListCredentials(ctx)
+	if err != nil {
+		t.Fatalf("Failed to list credentials: %v", err)
+	}
+
+	if len(creds) != 2 {
+		t.Fatalf("Expected 2 credentials, got %d", len(creds))
+	}
+
+	if creds[0].ID != "cred-1" {
+		t.Errorf("Expected first credential ID %q, got %q", "cred-1", creds[0].ID)
+	}
+
+	// Verify issuedAt is mapped to CreatedAt
+	if creds[0].CreatedAt != 1700000000000 {
+		t.Errorf("Expected CreatedAt %d, got %d", 1700000000000, creds[0].CreatedAt)
+	}
+
+	if creds[0].LastVerifiedAt != 1700001000000 {
+		t.Errorf("Expected LastVerifiedAt %d, got %d", 1700001000000, creds[0].LastVerifiedAt)
+	}
+
+	if creds[1].AgentName != "agent-2" {
+		t.Errorf("Expected second credential AgentName %q, got %q", "agent-2", creds[1].AgentName)
+	}
+
+	if creds[1].LastVerifiedAt != 0 {
+		t.Errorf("Expected zero LastVerifiedAt for second credential, got %d", creds[1].LastVerifiedAt)
+	}
+}
+
+func TestDeleteCredential(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" {
+			t.Errorf("Expected DELETE request, got %s", r.Method)
+		}
+
+		if r.URL.Path != "/credentials/cred-123" {
+			t.Errorf("Expected /credentials/cred-123 path, got %s", r.URL.Path)
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "Bearer test-api-key" {
+			t.Errorf("Expected Authorization header %q, got %q", "Bearer test-api-key", authHeader)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := &TetherClient{
+		apiKey:     "test-api-key",
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	ctx := context.Background()
+	ok, err := client.DeleteCredential(ctx, "cred-123")
+	if err != nil {
+		t.Fatalf("Failed to delete credential: %v", err)
+	}
+
+	if !ok {
+		t.Error("Expected delete to return true")
+	}
+}
+
+func TestCredentialMethodsRequireApiKey(t *testing.T) {
+	client := &TetherClient{
+		credentialID: "test-credential",
+		httpClient:   &http.Client{Timeout: 5 * time.Second},
+	}
+
+	ctx := context.Background()
+
+	// CreateCredential
+	_, err := client.CreateCredential(ctx, "agent", "desc")
+	if err == nil {
+		t.Error("Expected error for CreateCredential without API key")
+	}
+	if !strings.Contains(err.Error(), "API key is required") {
+		t.Errorf("Expected 'API key is required' error, got: %v", err)
+	}
+
+	// ListCredentials
+	_, err = client.ListCredentials(ctx)
+	if err == nil {
+		t.Error("Expected error for ListCredentials without API key")
+	}
+	if !strings.Contains(err.Error(), "API key is required") {
+		t.Errorf("Expected 'API key is required' error, got: %v", err)
+	}
+
+	// DeleteCredential
+	_, err = client.DeleteCredential(ctx, "cred-123")
+	if err == nil {
+		t.Error("Expected error for DeleteCredential without API key")
+	}
+	if !strings.Contains(err.Error(), "API key is required") {
+		t.Errorf("Expected 'API key is required' error, got: %v", err)
+	}
+}
+
+func TestDeleteCredentialHTTPError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := &TetherClient{
+		apiKey:     "test-api-key",
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	ctx := context.Background()
+	ok, err := client.DeleteCredential(ctx, "nonexistent")
+	if err == nil {
+		t.Error("Expected error for HTTP 404")
+	}
+
+	if ok {
+		t.Error("Expected delete to return false on error")
+	}
+
+	apiErr, isAPIErr := err.(*APIError)
+	if !isAPIErr {
+		t.Errorf("Expected APIError, got %T", err)
+	} else if apiErr.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, apiErr.StatusCode)
+	}
+}

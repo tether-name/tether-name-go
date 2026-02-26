@@ -44,20 +44,23 @@ func (et EpochTime) MarshalJSON() ([]byte, error) {
 
 // Options configures the TetherClient
 type Options struct {
-	// CredentialID is the unique identifier for this agent (required)
+	// CredentialID is the unique identifier for this agent (required for verify/sign operations)
 	CredentialID string
-	
+
 	// PrivateKeyPath is the file path to the RSA private key (PEM or DER format)
 	PrivateKeyPath string
-	
+
 	// PrivateKeyPEM contains the RSA private key in PEM format as bytes
 	PrivateKeyPEM []byte
-	
+
 	// PrivateKeyDER contains the RSA private key in DER format as bytes
 	PrivateKeyDER []byte
-	
+
 	// BaseURL overrides the default API base URL (default: https://api.tether.name)
 	BaseURL string
+
+	// ApiKey for management operations (alternative to credential auth)
+	ApiKey string
 }
 
 // VerificationResult contains the result of a verification attempt
@@ -104,4 +107,38 @@ type verifyResponse struct {
 	Email           string     `json:"email,omitempty"`
 	RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
 	Error           string     `json:"error,omitempty"`
+}
+
+// Credential represents an agent credential
+type Credential struct {
+	ID                string `json:"id"`
+	AgentName         string `json:"agentName"`
+	Description       string `json:"description"`
+	CreatedAt         int64  `json:"createdAt"`
+	RegistrationToken string `json:"registrationToken,omitempty"`
+	LastVerifiedAt    int64  `json:"lastVerifiedAt,omitempty"`
+}
+
+// issueCredentialRequest is the request to create a credential
+type issueCredentialRequest struct {
+	AgentName   string `json:"agentName"`
+	Description string `json:"description,omitempty"`
+}
+
+// issueCredentialResponse is the response from credential creation
+type issueCredentialResponse struct {
+	ID                string `json:"id"`
+	AgentName         string `json:"agentName"`
+	Description       string `json:"description"`
+	CreatedAt         int64  `json:"createdAt"`
+	RegistrationToken string `json:"registrationToken"`
+}
+
+// listCredentialEntry is the API response shape for list, where createdAt is "issuedAt"
+type listCredentialEntry struct {
+	ID             string `json:"id"`
+	AgentName      string `json:"agentName"`
+	Description    string `json:"description"`
+	IssuedAt       int64  `json:"issuedAt"`
+	LastVerifiedAt int64  `json:"lastVerifiedAt,omitempty"`
 }
