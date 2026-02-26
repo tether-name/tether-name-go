@@ -280,12 +280,12 @@ func (c *TetherClient) setAuthHeaders(req *http.Request) {
 	}
 }
 
-// CreateCredential creates a new agent credential.
+// CreateAgent creates a new agent.
 // Requires an API key to be configured.
-func (c *TetherClient) CreateCredential(ctx context.Context, agentName string, description string) (*Credential, error) {
+func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, description string) (*Agent, error) {
 	if c.apiKey == "" {
 		return nil, &APIError{
-			Message: "API key is required for credential management",
+			Message: "API key is required for agent management",
 			Err:     ErrAPI,
 		}
 	}
@@ -342,7 +342,7 @@ func (c *TetherClient) CreateCredential(ctx context.Context, agentName string, d
 		}
 	}
 
-	return &Credential{
+	return &Agent{
 		ID:                issueResp.ID,
 		AgentName:         issueResp.AgentName,
 		Description:       issueResp.Description,
@@ -351,12 +351,12 @@ func (c *TetherClient) CreateCredential(ctx context.Context, agentName string, d
 	}, nil
 }
 
-// ListCredentials lists all credentials for the authenticated user.
+// ListAgents lists all agents for the authenticated user.
 // Requires an API key to be configured.
-func (c *TetherClient) ListCredentials(ctx context.Context) ([]Credential, error) {
+func (c *TetherClient) ListAgents(ctx context.Context) ([]Agent, error) {
 	if c.apiKey == "" {
 		return nil, &APIError{
-			Message: "API key is required for credential management",
+			Message: "API key is required for agent management",
 			Err:     ErrAPI,
 		}
 	}
@@ -400,9 +400,9 @@ func (c *TetherClient) ListCredentials(ctx context.Context) ([]Credential, error
 		}
 	}
 
-	credentials := make([]Credential, len(entries))
+	agents := make([]Agent, len(entries))
 	for i, entry := range entries {
-		credentials[i] = Credential{
+		agents[i] = Agent{
 			ID:             entry.ID,
 			AgentName:      entry.AgentName,
 			Description:    entry.Description,
@@ -411,20 +411,20 @@ func (c *TetherClient) ListCredentials(ctx context.Context) ([]Credential, error
 		}
 	}
 
-	return credentials, nil
+	return agents, nil
 }
 
-// DeleteCredential deletes a credential by ID.
+// DeleteAgent deletes an agent by ID.
 // Requires an API key to be configured.
-func (c *TetherClient) DeleteCredential(ctx context.Context, credentialID string) (bool, error) {
+func (c *TetherClient) DeleteAgent(ctx context.Context, agentID string) (bool, error) {
 	if c.apiKey == "" {
 		return false, &APIError{
-			Message: "API key is required for credential management",
+			Message: "API key is required for agent management",
 			Err:     ErrAPI,
 		}
 	}
 
-	url := c.baseURL + "/credentials/" + credentialID
+	url := c.baseURL + "/credentials/" + agentID
 
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {

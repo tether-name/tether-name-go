@@ -109,8 +109,8 @@ type verifyResponse struct {
 	Error           string     `json:"error,omitempty"`
 }
 
-// Credential represents an agent credential
-type Credential struct {
+// Agent represents a registered agent
+type Agent struct {
 	ID                string `json:"id"`
 	AgentName         string `json:"agentName"`
 	Description       string `json:"description"`
@@ -119,13 +119,13 @@ type Credential struct {
 	LastVerifiedAt    int64  `json:"lastVerifiedAt,omitempty"`
 }
 
-// issueCredentialRequest is the request to create a credential
+// issueCredentialRequest is the request payload for the /credentials/issue endpoint
 type issueCredentialRequest struct {
 	AgentName   string `json:"agentName"`
 	Description string `json:"description,omitempty"`
 }
 
-// issueCredentialResponse is the response from credential creation
+// issueCredentialResponse is the response payload from the /credentials/issue endpoint
 type issueCredentialResponse struct {
 	ID                string `json:"id"`
 	AgentName         string `json:"agentName"`
@@ -134,7 +134,7 @@ type issueCredentialResponse struct {
 	RegistrationToken string `json:"registrationToken"`
 }
 
-// listCredentialEntry is the API response shape for list, where createdAt is "issuedAt"
+// listCredentialEntry is the API response shape for /credentials, where createdAt is "issuedAt"
 type listCredentialEntry struct {
 	ID             string `json:"id"`
 	AgentName      string `json:"agentName"`

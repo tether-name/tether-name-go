@@ -615,7 +615,7 @@ func TestSubmitProofRequiresCredentialID(t *testing.T) {
 	}
 }
 
-func TestCreateCredential(t *testing.T) {
+func TestCreateAgent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			t.Errorf("Expected POST request, got %s", r.Method)
@@ -662,29 +662,29 @@ func TestCreateCredential(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	cred, err := client.CreateCredential(ctx, "my-agent", "Test agent")
+	agent, err := client.CreateAgent(ctx, "my-agent", "Test agent")
 	if err != nil {
-		t.Fatalf("Failed to create credential: %v", err)
+		t.Fatalf("Failed to create agent: %v", err)
 	}
 
-	if cred.ID != "cred-123" {
-		t.Errorf("Expected ID %q, got %q", "cred-123", cred.ID)
+	if agent.ID != "cred-123" {
+		t.Errorf("Expected ID %q, got %q", "cred-123", agent.ID)
 	}
 
-	if cred.AgentName != "my-agent" {
-		t.Errorf("Expected AgentName %q, got %q", "my-agent", cred.AgentName)
+	if agent.AgentName != "my-agent" {
+		t.Errorf("Expected AgentName %q, got %q", "my-agent", agent.AgentName)
 	}
 
-	if cred.RegistrationToken != "reg-token-abc" {
-		t.Errorf("Expected RegistrationToken %q, got %q", "reg-token-abc", cred.RegistrationToken)
+	if agent.RegistrationToken != "reg-token-abc" {
+		t.Errorf("Expected RegistrationToken %q, got %q", "reg-token-abc", agent.RegistrationToken)
 	}
 
-	if cred.CreatedAt != 1700000000000 {
-		t.Errorf("Expected CreatedAt %d, got %d", 1700000000000, cred.CreatedAt)
+	if agent.CreatedAt != 1700000000000 {
+		t.Errorf("Expected CreatedAt %d, got %d", 1700000000000, agent.CreatedAt)
 	}
 }
 
-func TestListCredentials(t *testing.T) {
+func TestListAgents(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET request, got %s", r.Method)
@@ -716,38 +716,38 @@ func TestListCredentials(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	creds, err := client.ListCredentials(ctx)
+	agents, err := client.ListAgents(ctx)
 	if err != nil {
-		t.Fatalf("Failed to list credentials: %v", err)
+		t.Fatalf("Failed to list agents: %v", err)
 	}
 
-	if len(creds) != 2 {
-		t.Fatalf("Expected 2 credentials, got %d", len(creds))
+	if len(agents) != 2 {
+		t.Fatalf("Expected 2 agents, got %d", len(agents))
 	}
 
-	if creds[0].ID != "cred-1" {
-		t.Errorf("Expected first credential ID %q, got %q", "cred-1", creds[0].ID)
+	if agents[0].ID != "cred-1" {
+		t.Errorf("Expected first agent ID %q, got %q", "cred-1", agents[0].ID)
 	}
 
 	// Verify issuedAt is mapped to CreatedAt
-	if creds[0].CreatedAt != 1700000000000 {
-		t.Errorf("Expected CreatedAt %d, got %d", 1700000000000, creds[0].CreatedAt)
+	if agents[0].CreatedAt != 1700000000000 {
+		t.Errorf("Expected CreatedAt %d, got %d", 1700000000000, agents[0].CreatedAt)
 	}
 
-	if creds[0].LastVerifiedAt != 1700001000000 {
-		t.Errorf("Expected LastVerifiedAt %d, got %d", 1700001000000, creds[0].LastVerifiedAt)
+	if agents[0].LastVerifiedAt != 1700001000000 {
+		t.Errorf("Expected LastVerifiedAt %d, got %d", 1700001000000, agents[0].LastVerifiedAt)
 	}
 
-	if creds[1].AgentName != "agent-2" {
-		t.Errorf("Expected second credential AgentName %q, got %q", "agent-2", creds[1].AgentName)
+	if agents[1].AgentName != "agent-2" {
+		t.Errorf("Expected second agent AgentName %q, got %q", "agent-2", agents[1].AgentName)
 	}
 
-	if creds[1].LastVerifiedAt != 0 {
-		t.Errorf("Expected zero LastVerifiedAt for second credential, got %d", creds[1].LastVerifiedAt)
+	if agents[1].LastVerifiedAt != 0 {
+		t.Errorf("Expected zero LastVerifiedAt for second agent, got %d", agents[1].LastVerifiedAt)
 	}
 }
 
-func TestDeleteCredential(t *testing.T) {
+func TestDeleteAgent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "DELETE" {
 			t.Errorf("Expected DELETE request, got %s", r.Method)
@@ -773,9 +773,9 @@ func TestDeleteCredential(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ok, err := client.DeleteCredential(ctx, "cred-123")
+	ok, err := client.DeleteAgent(ctx, "cred-123")
 	if err != nil {
-		t.Fatalf("Failed to delete credential: %v", err)
+		t.Fatalf("Failed to delete agent: %v", err)
 	}
 
 	if !ok {
@@ -783,7 +783,7 @@ func TestDeleteCredential(t *testing.T) {
 	}
 }
 
-func TestCredentialMethodsRequireApiKey(t *testing.T) {
+func TestAgentMethodsRequireApiKey(t *testing.T) {
 	client := &TetherClient{
 		credentialID: "test-credential",
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
@@ -791,35 +791,35 @@ func TestCredentialMethodsRequireApiKey(t *testing.T) {
 
 	ctx := context.Background()
 
-	// CreateCredential
-	_, err := client.CreateCredential(ctx, "agent", "desc")
+	// CreateAgent
+	_, err := client.CreateAgent(ctx, "agent", "desc")
 	if err == nil {
-		t.Error("Expected error for CreateCredential without API key")
+		t.Error("Expected error for CreateAgent without API key")
 	}
 	if !strings.Contains(err.Error(), "API key is required") {
 		t.Errorf("Expected 'API key is required' error, got: %v", err)
 	}
 
-	// ListCredentials
-	_, err = client.ListCredentials(ctx)
+	// ListAgents
+	_, err = client.ListAgents(ctx)
 	if err == nil {
-		t.Error("Expected error for ListCredentials without API key")
+		t.Error("Expected error for ListAgents without API key")
 	}
 	if !strings.Contains(err.Error(), "API key is required") {
 		t.Errorf("Expected 'API key is required' error, got: %v", err)
 	}
 
-	// DeleteCredential
-	_, err = client.DeleteCredential(ctx, "cred-123")
+	// DeleteAgent
+	_, err = client.DeleteAgent(ctx, "cred-123")
 	if err == nil {
-		t.Error("Expected error for DeleteCredential without API key")
+		t.Error("Expected error for DeleteAgent without API key")
 	}
 	if !strings.Contains(err.Error(), "API key is required") {
 		t.Errorf("Expected 'API key is required' error, got: %v", err)
 	}
 }
 
-func TestDeleteCredentialHTTPError(t *testing.T) {
+func TestDeleteAgentHTTPError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -832,7 +832,7 @@ func TestDeleteCredentialHTTPError(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ok, err := client.DeleteCredential(ctx, "nonexistent")
+	ok, err := client.DeleteAgent(ctx, "nonexistent")
 	if err == nil {
 		t.Error("Expected error for HTTP 404")
 	}
