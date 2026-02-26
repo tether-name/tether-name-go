@@ -1,8 +1,46 @@
 package tether
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 )
+
+// EpochTime wraps time.Time to handle both epoch millisecond integers
+// and ISO 8601 strings when unmarshaling JSON.
+type EpochTime struct {
+	time.Time
+}
+
+// UnmarshalJSON handles epoch ms (number) or ISO 8601 (string).
+func (et *EpochTime) UnmarshalJSON(data []byte) error {
+	// Try as number first (epoch milliseconds)
+	var ms float64
+	if err := json.Unmarshal(data, &ms); err == nil {
+		sec := int64(ms) / 1000
+		nsec := (int64(ms) % 1000) * int64(time.Millisecond)
+		et.Time = time.Unix(sec, nsec).UTC()
+		return nil
+	}
+
+	// Try as string (ISO 8601)
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			return fmt.Errorf("cannot parse time string %q: %w", s, err)
+		}
+		et.Time = t
+		return nil
+	}
+
+	return fmt.Errorf("cannot unmarshal %s as time", string(data))
+}
+
+// MarshalJSON outputs as epoch milliseconds for round-trip consistency.
+func (et EpochTime) MarshalJSON() ([]byte, error) {
+	return json.Marshal(et.UnixMilli())
+}
 
 // Options configures the TetherClient
 type Options struct {
@@ -37,7 +75,7 @@ type VerificationResult struct {
 	Email string `json:"email,omitempty"`
 	
 	// RegisteredSince is when this agent was first registered
-	RegisteredSince *time.Time `json:"registeredSince,omitempty"`
+	RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
 	
 	// Error contains any error message if verification failed
 	Error string `json:"error,omitempty"`
@@ -64,6 +102,6 @@ type verifyResponse struct {
 	VerifyURL       string     `json:"verifyUrl,omitempty"`
 	AgentName       string     `json:"agentName,omitempty"`
 	Email           string     `json:"email,omitempty"`
-	RegisteredSince *time.Time `json:"registeredSince,omitempty"`
+	RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
 	Error           string     `json:"error,omitempty"`
 }

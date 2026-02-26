@@ -228,13 +228,13 @@ func TestClientSubmitProof(t *testing.T) {
 		}
 		
 		// Send success response
-		registeredSince := time.Now().Add(-30 * 24 * time.Hour) // 30 days ago
+		t0 := time.Now().Add(-30 * 24 * time.Hour); registeredSince := &EpochTime{t0} // 30 days ago
 		response := verifyResponse{
 			Valid:           true,
 			VerifyURL:       "https://tether.name/check?challenge=test-challenge",
 			AgentName:       "Test Agent",
 			Email:           "test@example.com",
-			RegisteredSince: &registeredSince,
+			RegisteredSince: registeredSince,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
@@ -295,13 +295,13 @@ func TestClientVerify(t *testing.T) {
 			
 		case "/challenge/verify":
 			proofSubmitted = true
-			registeredSince := time.Now().Add(-30 * 24 * time.Hour)
+			t0 := time.Now().Add(-30 * 24 * time.Hour); registeredSince := &EpochTime{t0}
 			response := verifyResponse{
 				Valid:           true,
 				VerifyURL:       "https://tether.name/check?challenge=test-challenge-uuid",
 				AgentName:       "Test Agent",
 				Email:           "test@example.com",
-				RegisteredSince: &registeredSince,
+				RegisteredSince: registeredSince,
 			}
 			json.NewEncoder(w).Encode(response)
 			
