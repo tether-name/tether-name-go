@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/tether-name/tether-name-go)](https://goreportcard.com/report/github.com/tether-name/tether-name-go)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A Go client library for [Tether](https://tether.name) - cryptographic identity verification for AI agents. Tether lets AI agents prove their identity using RSA digital signatures, enabling secure verification of agent authenticity.
+A Go client library for [Tether](https://tether.name) - cryptographic identity verification for AI agents. Tether lets AI agents prove their identity using RSA digital signatures, and manage agents programmatically with API keys.
 
 ## Installation
 
@@ -46,6 +46,46 @@ func main() {
     fmt.Printf("Verify URL: %s\n", result.VerifyURL)
 }
 ```
+
+## Agent Management
+
+Use an API key to create, list, and delete agents programmatically:
+
+```go
+client, err := tether.NewClient(tether.Options{
+    ApiKey: "tether_sk_...",
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+ctx := context.Background()
+
+// Create a new agent
+agent, err := client.CreateAgent(ctx, "my-bot", "My AI assistant")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Created agent: %s (ID: %s)\n", agent.AgentName, agent.ID)
+
+// List all agents
+agents, err := client.ListAgents(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+for _, a := range agents {
+    fmt.Printf("  %s (%s)\n", a.AgentName, a.ID)
+}
+
+// Delete an agent
+deleted, err := client.DeleteAgent(ctx, agent.ID)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Deleted: %t\n", deleted)
+```
+
+When using an API key, `CredentialID` and private key options become optional — they're only needed for verify/sign operations.
 
 ## Step-by-Step Verification
 
@@ -113,6 +153,7 @@ The library supports multiple ways to provide your RSA private key:
 client, err := tether.NewClient(tether.Options{
     CredentialID:   "your-credential-id",
     PrivateKeyPath: "/path/to/key.pem",             // PEM or DER format
+    ApiKey:         "tether_sk_...",                 // Optional, for agent management
     BaseURL:        "https://api.tether.name",       // Optional, defaults to this
 })
 ```
@@ -144,6 +185,7 @@ You can use environment variables as fallbacks:
 ```bash
 export TETHER_CREDENTIAL_ID="your-credential-id"
 export TETHER_PRIVATE_KEY_PATH="/path/to/your/private-key.pem"
+export TETHER_API_KEY="tether_sk_..."
 ```
 
 ```go
@@ -159,10 +201,11 @@ client, err := tether.NewClient(tether.Options{})
 Creates a new Tether client with the specified options.
 
 **Options:**
-- `CredentialID` (string): Your unique agent credential ID (required)
+- `CredentialID` (string): Your unique agent credential ID (required for verify/sign, optional with API key)
 - `PrivateKeyPath` (string): Path to RSA private key file (PEM/DER format)
 - `PrivateKeyPEM` ([]byte): RSA private key in PEM format
 - `PrivateKeyDER` ([]byte): RSA private key in DER format
+- `ApiKey` (string): API key for agent management (falls back to `TETHER_API_KEY` env var)
 - `BaseURL` (string): API base URL (default: `https://api.tether.name`)
 
 ### Client Methods
@@ -179,6 +222,15 @@ Signs a challenge using the client's private key. Returns URL-safe base64 signat
 #### `SubmitProof(ctx context.Context, challenge, proof string) (*VerificationResult, error)`
 Submits signed challenge proof for verification.
 
+#### `CreateAgent(ctx context.Context, agentName string, description string) (*Agent, error)`
+Creates a new agent. Requires an API key.
+
+#### `ListAgents(ctx context.Context) ([]Agent, error)`
+Lists all agents for the authenticated user. Requires an API key.
+
+#### `DeleteAgent(ctx context.Context, agentID string) (bool, error)`
+Deletes an agent by ID. Requires an API key.
+
 ### Types
 
 #### `VerificationResult`
@@ -191,6 +243,18 @@ type VerificationResult struct {
     RegisteredSince *time.Time `json:"registeredSince,omitempty"`
     Error           string     `json:"error,omitempty"`
     Challenge       string     `json:"challenge,omitempty"`
+}
+```
+
+#### `Agent`
+```go
+type Agent struct {
+    ID                string `json:"id"`
+    AgentName         string `json:"agentName"`
+    Description       string `json:"description"`
+    CreatedAt         int64  `json:"createdAt"`
+    RegistrationToken string `json:"registrationToken,omitempty"`
+    LastVerifiedAt    int64  `json:"lastVerifiedAt,omitempty"`
 }
 ```
 
