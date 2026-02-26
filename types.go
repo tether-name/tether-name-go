@@ -17,6 +17,9 @@ type Options struct {
 	
 	// PrivateKeyDER contains the RSA private key in DER format as bytes
 	PrivateKeyDER []byte
+	
+	// BaseURL overrides the default API base URL (default: https://api.tether.name)
+	BaseURL string
 }
 
 // VerificationResult contains the result of a verification attempt

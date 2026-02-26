@@ -16,7 +16,7 @@ const (
 	DefaultBaseURL = "https://api.tether.name"
 	
 	// UserAgent for HTTP requests
-	UserAgent = "tether-go/0.1.0"
+	UserAgent = "tether-go/1.0.0"
 )
 
 // TetherClient represents a client for the Tether API
@@ -55,10 +55,15 @@ func NewClient(opts Options) (*TetherClient, error) {
 		return nil, err
 	}
 	
+	baseURL := opts.BaseURL
+	if baseURL == "" {
+		baseURL = DefaultBaseURL
+	}
+	
 	return &TetherClient{
 		credentialID: credentialID,
 		privateKey:   privateKey,
-		baseURL:      DefaultBaseURL,
+		baseURL:      baseURL,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},

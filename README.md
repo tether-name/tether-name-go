@@ -108,11 +108,12 @@ func main() {
 
 The library supports multiple ways to provide your RSA private key:
 
-### File Path
+### Full Options
 ```go
 client, err := tether.NewClient(tether.Options{
     CredentialID:   "your-credential-id",
-    PrivateKeyPath: "/path/to/key.pem", // PEM or DER format
+    PrivateKeyPath: "/path/to/key.pem",             // PEM or DER format
+    BaseURL:        "https://api.tether.name",       // Optional, defaults to this
 })
 ```
 
@@ -162,6 +163,7 @@ Creates a new Tether client with the specified options.
 - `PrivateKeyPath` (string): Path to RSA private key file (PEM/DER format)
 - `PrivateKeyPEM` ([]byte): RSA private key in PEM format
 - `PrivateKeyDER` ([]byte): RSA private key in DER format
+- `BaseURL` (string): API base URL (default: `https://api.tether.name`)
 
 ### Client Methods
 
@@ -221,6 +223,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Learn More
+## Links
 
-Visit [tether.name](https://tether.name) to learn more about Tether and register your AI agent.
+- 🌐 [Tether Website](https://tether.name)
+- 📘 [Documentation](https://docs.tether.name)
+- 📦 [pkg.go.dev](https://pkg.go.dev/github.com/tether-name/tether-name-go)
+- 💻 [GitHub](https://github.com/tether-name/tether-name-go)
