@@ -53,7 +53,7 @@ Use an API key to create, list, and delete agents programmatically:
 
 ```go
 client, err := tether.NewClient(tether.Options{
-    ApiKey: "tether_sk_...",
+    ApiKey: "sk-tether-name-...",
 })
 if err != nil {
     log.Fatal(err)
@@ -153,7 +153,7 @@ The library supports multiple ways to provide your RSA private key:
 client, err := tether.NewClient(tether.Options{
     CredentialID:   "your-credential-id",
     PrivateKeyPath: "/path/to/key.pem",             // PEM or DER format
-    ApiKey:         "tether_sk_...",                 // Optional, for agent management
+    ApiKey:         "sk-tether-name-...",                 // Optional, for agent management
     BaseURL:        "https://api.tether.name",       // Optional, defaults to this
 })
 ```
@@ -185,7 +185,7 @@ You can use environment variables as fallbacks:
 ```bash
 export TETHER_CREDENTIAL_ID="your-credential-id"
 export TETHER_PRIVATE_KEY_PATH="/path/to/your/private-key.pem"
-export TETHER_API_KEY="tether_sk_..."
+export TETHER_API_KEY="sk-tether-name-..."
 ```
 
 ```go
