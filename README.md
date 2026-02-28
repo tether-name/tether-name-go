@@ -238,7 +238,7 @@ type VerificationResult struct {
     AgentName       string     `json:"agentName,omitempty"`
     VerifyURL       string     `json:"verifyUrl,omitempty"`
     Email           string     `json:"email,omitempty"`
-    RegisteredSince *time.Time `json:"registeredSince,omitempty"`
+    RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
     Error           string     `json:"error,omitempty"`
     Challenge       string     `json:"challenge,omitempty"`
 }
