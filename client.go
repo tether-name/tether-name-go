@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 )
@@ -420,9 +421,9 @@ func (c *TetherClient) DeleteAgent(ctx context.Context, agentID string) (bool, e
 		}
 	}
 
-	url := c.baseURL + "/credentials/" + agentID
+	deleteURL := c.baseURL + "/credentials/" + url.PathEscape(agentID)
 
-	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", deleteURL, nil)
 	if err != nil {
 		return false, &APIError{
 			Message: "failed to create request",
