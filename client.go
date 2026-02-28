@@ -76,16 +76,12 @@ func NewClient(opts Options) (*TetherClient, error) {
 		}
 	}
 
-	baseURL := opts.BaseURL
-	if baseURL == "" {
-		baseURL = DefaultBaseURL
-	}
 
 	return &TetherClient{
 		credentialID: credentialID,
 		privateKey:   privateKey,
 		apiKey:       apiKey,
-		baseURL:      baseURL,
+		baseURL:      DefaultBaseURL,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},

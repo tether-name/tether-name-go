@@ -29,7 +29,7 @@ func main() {
     // Initialize client with credential ID and private key
     client, err := tether.NewClient(tether.Options{
         CredentialID:   "your-credential-id",
-        PrivateKeyPath: "/path/to/your/private-key.pem",
+        PrivateKeyPath: "/path/to/private-key.der",
     })
     if err != nil {
         log.Fatal(err)
@@ -105,7 +105,7 @@ import (
 func main() {
     client, err := tether.NewClient(tether.Options{
         CredentialID:   "your-credential-id",
-        PrivateKeyPath: "/path/to/your/private-key.pem",
+        PrivateKeyPath: "/path/to/private-key.der",
     })
     if err != nil {
         log.Fatal(err)
@@ -152,9 +152,8 @@ The library supports multiple ways to provide your RSA private key:
 ```go
 client, err := tether.NewClient(tether.Options{
     CredentialID:   "your-credential-id",
-    PrivateKeyPath: "/path/to/key.pem",             // PEM or DER format
+    PrivateKeyPath: "/path/to/key.der",             // DER or PEM format
     ApiKey:         "sk-tether-name-...",                 // Optional, for agent management
-    BaseURL:        "https://api.tether.name",       // Optional, defaults to this
 })
 ```
 
@@ -184,7 +183,7 @@ You can use environment variables as fallbacks:
 
 ```bash
 export TETHER_CREDENTIAL_ID="your-credential-id"
-export TETHER_PRIVATE_KEY_PATH="/path/to/your/private-key.pem"
+export TETHER_PRIVATE_KEY_PATH="/path/to/private-key.der"
 export TETHER_API_KEY="sk-tether-name-..."
 ```
 
@@ -206,7 +205,6 @@ Creates a new Tether client with the specified options.
 - `PrivateKeyPEM` ([]byte): RSA private key in PEM format
 - `PrivateKeyDER` ([]byte): RSA private key in DER format
 - `ApiKey` (string): API key for agent management (falls back to `TETHER_API_KEY` env var)
-- `BaseURL` (string): API base URL (default: `https://api.tether.name`)
 
 ### Client Methods
 
