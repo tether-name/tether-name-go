@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -280,21 +281,21 @@ func TestClientSubmitProof(t *testing.T) {
 }
 
 func TestClientVerify(t *testing.T) {
-	challengeRequested := false
-	proofSubmitted := false
-	
+	var challengeRequested atomic.Bool
+	var proofSubmitted atomic.Bool
+
 	// Create a mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		
+
 		switch r.URL.Path {
 		case "/challenge":
-			challengeRequested = true
+			challengeRequested.Store(true)
 			response := challengeResponse{Code: "test-challenge-uuid"}
 			json.NewEncoder(w).Encode(response)
-			
+
 		case "/challenge/verify":
-			proofSubmitted = true
+			proofSubmitted.Store(true)
 			t0 := time.Now().Add(-30 * 24 * time.Hour); registeredSince := &EpochTime{t0}
 			response := verifyResponse{
 				Valid:           true,
@@ -329,11 +330,11 @@ func TestClientVerify(t *testing.T) {
 		t.Fatalf("Failed to verify: %v", err)
 	}
 	
-	if !challengeRequested {
+	if !challengeRequested.Load() {
 		t.Error("Challenge was not requested")
 	}
-	
-	if !proofSubmitted {
+
+	if !proofSubmitted.Load() {
 		t.Error("Proof was not submitted")
 	}
 	
