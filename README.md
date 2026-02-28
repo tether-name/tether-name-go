@@ -232,6 +232,19 @@ Deletes an agent by ID. Requires an API key.
 ### Types
 
 #### `VerificationResult`
+
+Result returned by `Verify`, `RequestChallenge`, and `SubmitProof`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Verified` | `bool` | Whether verification succeeded |
+| `AgentName` | `string` | Registered agent name |
+| `VerifyURL` | `string` | Public verification URL |
+| `Email` | `string` | Registered owner email |
+| `RegisteredSince` | `*EpochTime` | Registration timestamp |
+| `Error` | `string` | Error message if verification failed |
+| `Challenge` | `string` | The verified challenge code |
+
 ```go
 type VerificationResult struct {
     Verified        bool       `json:"verified"`
@@ -245,6 +258,18 @@ type VerificationResult struct {
 ```
 
 #### `Agent`
+
+Agent returned by management operations.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ID` | `string` | Unique agent ID |
+| `AgentName` | `string` | Agent display name |
+| `Description` | `string` | Agent description |
+| `CreatedAt` | `int64` | Creation time (epoch ms) |
+| `RegistrationToken` | `string` | Token for key registration (returned on create) |
+| `LastVerifiedAt` | `int64` | Last verification time (epoch ms) |
+
 ```go
 type Agent struct {
     ID                string `json:"id"`
