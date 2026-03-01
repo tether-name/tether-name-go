@@ -323,7 +323,7 @@ func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, descri
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
 			Message:    fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
