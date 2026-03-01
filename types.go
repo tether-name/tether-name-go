@@ -44,8 +44,8 @@ func (et EpochTime) MarshalJSON() ([]byte, error) {
 
 // Options configures the TetherClient
 type Options struct {
-	// CredentialID is the unique identifier for this agent (required for verify/sign operations)
-	CredentialID string
+	// AgentID is the unique identifier for this agent (required for verify/sign operations)
+	AgentID string
 
 	// PrivateKeyPath is the file path to the RSA private key (PEM or DER format)
 	PrivateKeyPath string
@@ -57,7 +57,7 @@ type Options struct {
 	PrivateKeyDER []byte
 
 
-	// ApiKey for management operations (alternative to credential auth)
+	// ApiKey for management operations (alternative to agent auth)
 	ApiKey string
 }
 
@@ -94,7 +94,7 @@ type challengeResponse struct {
 type verifyRequest struct {
 	Challenge    string `json:"challenge"`
 	Proof        string `json:"proof"`
-	CredentialID string `json:"credentialId"`
+	AgentID string `json:"agentId"`
 }
 
 // VerifyResponse represents the response from challenge verification
@@ -117,14 +117,14 @@ type Agent struct {
 	LastVerifiedAt    int64  `json:"lastVerifiedAt,omitempty"`
 }
 
-// issueCredentialRequest is the request payload for the /credentials/issue endpoint
-type issueCredentialRequest struct {
+// issueAgentRequest is the request payload for the /agents/issue endpoint
+type issueAgentRequest struct {
 	AgentName   string `json:"agentName"`
 	Description string `json:"description,omitempty"`
 }
 
-// issueCredentialResponse is the response payload from the /credentials/issue endpoint
-type issueCredentialResponse struct {
+// issueAgentResponse is the response payload from the /agents/issue endpoint
+type issueAgentResponse struct {
 	ID                string `json:"id"`
 	AgentName         string `json:"agentName"`
 	Description       string `json:"description"`
@@ -132,8 +132,8 @@ type issueCredentialResponse struct {
 	RegistrationToken string `json:"registrationToken"`
 }
 
-// listCredentialEntry is the API response shape for /credentials, where createdAt is "issuedAt"
-type listCredentialEntry struct {
+// listAgentEntry is the API response shape for /agents, where createdAt is "issuedAt"
+type listAgentEntry struct {
 	ID             string `json:"id"`
 	AgentName      string `json:"agentName"`
 	Description    string `json:"description"`

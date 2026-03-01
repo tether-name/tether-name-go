@@ -26,9 +26,9 @@ import (
 )
 
 func main() {
-    // Initialize client with credential ID and private key
+    // Initialize client with agent ID and private key
     client, err := tether.NewClient(tether.Options{
-        CredentialID:   "your-credential-id",
+        AgentID:   "your-agent-id",
         PrivateKeyPath: "/path/to/private-key.pem",
     })
     if err != nil {
@@ -85,7 +85,7 @@ if err != nil {
 fmt.Printf("Deleted: %t\n", deleted)
 ```
 
-When using an API key, `CredentialID` and private key options become optional — they're only needed for verify/sign operations.
+When using an API key, `AgentID` and private key options become optional — they're only needed for verify/sign operations.
 
 ## Step-by-Step Verification
 
@@ -104,7 +104,7 @@ import (
 
 func main() {
     client, err := tether.NewClient(tether.Options{
-        CredentialID:   "your-credential-id",
+        AgentID:   "your-agent-id",
         PrivateKeyPath: "/path/to/private-key.pem",
     })
     if err != nil {
@@ -151,7 +151,7 @@ The library supports multiple ways to provide your RSA private key:
 ### Full Options
 ```go
 client, err := tether.NewClient(tether.Options{
-    CredentialID:   "your-credential-id",
+    AgentID:   "your-agent-id",
     PrivateKeyPath: "/path/to/key.pem",              // PEM or DER format
     ApiKey:         "sk-tether-name-...",                 // Optional, for agent management
 })
@@ -164,7 +164,7 @@ pemData := []byte(`-----BEGIN RSA PRIVATE KEY-----
 -----END RSA PRIVATE KEY-----`)
 
 client, err := tether.NewClient(tether.Options{
-    CredentialID:  "your-credential-id",
+    AgentID:  "your-agent-id",
     PrivateKeyPEM: pemData,
 })
 ```
@@ -172,7 +172,7 @@ client, err := tether.NewClient(tether.Options{
 ### DER Bytes
 ```go
 client, err := tether.NewClient(tether.Options{
-    CredentialID:  "your-credential-id",
+    AgentID:  "your-agent-id",
     PrivateKeyDER: derBytes, // Raw DER-encoded key bytes
 })
 ```
@@ -182,7 +182,7 @@ client, err := tether.NewClient(tether.Options{
 You can use environment variables as fallbacks:
 
 ```bash
-export TETHER_CREDENTIAL_ID="your-credential-id"
+export TETHER_AGENT_ID="your-agent-id"
 export TETHER_PRIVATE_KEY_PATH="/path/to/private-key.pem"
 export TETHER_API_KEY="sk-tether-name-..."
 ```
@@ -200,7 +200,7 @@ client, err := tether.NewClient(tether.Options{})
 Creates a new Tether client with the specified options.
 
 **Options:**
-- `CredentialID` (string): Your unique agent credential ID (required for verify/sign, optional with API key)
+- `AgentID` (string): Your unique agent agent ID (required for verify/sign, optional with API key)
 - `PrivateKeyPath` (string): Path to RSA private key file (PEM or DER format)
 - `PrivateKeyPEM` ([]byte): RSA private key in PEM format
 - `PrivateKeyDER` ([]byte): RSA private key in DER format
@@ -290,7 +290,7 @@ The library provides custom error types for different failure scenarios:
 
 ## How Tether Works
 
-1. **Registration**: Register your AI agent at [tether.name](https://tether.name) to get a credential ID and generate an RSA key pair
+1. **Registration**: Register your AI agent at [tether.name](https://tether.name) to get a agent ID and generate an RSA key pair
 2. **Challenge**: Request a unique challenge code from the Tether API
 3. **Signature**: Sign the challenge with your private key using SHA256withRSA
 4. **Verification**: Submit the challenge and signature for verification

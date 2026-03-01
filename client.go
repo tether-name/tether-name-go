@@ -22,7 +22,7 @@ const (
 
 // TetherClient represents a client for the Tether API
 type TetherClient struct {
-	credentialID string
+	agentID string
 	privateKey   *rsa.PrivateKey
 	apiKey       string
 	baseURL      string
@@ -30,7 +30,7 @@ type TetherClient struct {
 }
 
 // NewClient creates a new TetherClient with the given options.
-// When ApiKey is provided, credentialID and privateKey become optional
+// When ApiKey is provided, agentID and privateKey become optional
 // (only required for verify/sign operations).
 func NewClient(opts Options) (*TetherClient, error) {
 	// Get API key from options or environment
@@ -39,16 +39,16 @@ func NewClient(opts Options) (*TetherClient, error) {
 		apiKey = os.Getenv("TETHER_API_KEY")
 	}
 
-	// Get credential ID from options or environment
-	credentialID := opts.CredentialID
-	if credentialID == "" {
-		credentialID = os.Getenv("TETHER_CREDENTIAL_ID")
+	// Get agent ID from options or environment
+	agentID := opts.AgentID
+	if agentID == "" {
+		agentID = os.Getenv("TETHER_AGENT_ID")
 	}
 
-	// Without an API key, credential ID is required
-	if apiKey == "" && credentialID == "" {
+	// Without an API key, agent ID is required
+	if apiKey == "" && agentID == "" {
 		return nil, &KeyLoadError{
-			Message: "credential ID is required",
+			Message: "agent ID is required",
 			Err:     ErrKeyLoad,
 		}
 	}
@@ -79,7 +79,7 @@ func NewClient(opts Options) (*TetherClient, error) {
 
 
 	return &TetherClient{
-		credentialID: credentialID,
+		agentID: agentID,
 		privateKey:   privateKey,
 		apiKey:       apiKey,
 		baseURL:      DefaultBaseURL,
@@ -185,11 +185,11 @@ func (c *TetherClient) Sign(challenge string) (string, error) {
 }
 
 // SubmitProof submits a signed challenge proof for verification.
-// Requires credentialID to be configured.
+// Requires agentID to be configured.
 func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string) (*VerificationResult, error) {
-	if c.credentialID == "" {
+	if c.agentID == "" {
 		return nil, &APIError{
-			Message: "credential ID is required for verification",
+			Message: "agent ID is required for verification",
 			Err:     ErrAPI,
 		}
 	}
@@ -199,7 +199,7 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 	verifyReq := verifyRequest{
 		Challenge:    normalizeChallenge(challenge),
 		Proof:        proof,
-		CredentialID: c.credentialID,
+		AgentID: c.agentID,
 	}
 	
 	reqBody, err := json.Marshal(verifyReq)
@@ -287,9 +287,9 @@ func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, descri
 		}
 	}
 
-	url := c.baseURL + "/credentials/issue"
+	url := c.baseURL + "/agents/issue"
 
-	issueReq := issueCredentialRequest{
+	issueReq := issueAgentRequest{
 		AgentName:   agentName,
 		Description: description,
 	}
@@ -331,7 +331,7 @@ func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, descri
 		}
 	}
 
-	var issueResp issueCredentialResponse
+	var issueResp issueAgentResponse
 	if err := json.NewDecoder(resp.Body).Decode(&issueResp); err != nil {
 		return nil, &APIError{
 			Message: "failed to decode response",
@@ -358,7 +358,7 @@ func (c *TetherClient) ListAgents(ctx context.Context) ([]Agent, error) {
 		}
 	}
 
-	url := c.baseURL + "/credentials"
+	url := c.baseURL + "/agents"
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -389,7 +389,7 @@ func (c *TetherClient) ListAgents(ctx context.Context) ([]Agent, error) {
 		}
 	}
 
-	var entries []listCredentialEntry
+	var entries []listAgentEntry
 	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
 		return nil, &APIError{
 			Message: "failed to decode response",
@@ -421,7 +421,7 @@ func (c *TetherClient) DeleteAgent(ctx context.Context, agentID string) (bool, e
 		}
 	}
 
-	deleteURL := c.baseURL + "/credentials/" + url.PathEscape(agentID)
+	deleteURL := c.baseURL + "/agents/" + url.PathEscape(agentID)
 
 	req, err := http.NewRequestWithContext(ctx, "DELETE", deleteURL, nil)
 	if err != nil {

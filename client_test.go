@@ -27,23 +27,23 @@ func TestNewClient(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "with credential ID and PEM bytes",
+			name: "with agent ID and PEM bytes",
 			opts: Options{
-				CredentialID:  "test-credential",
+				AgentID:  "test-agent",
 				PrivateKeyPEM: pemData,
 			},
 			expectError: false,
 		},
 		{
-			name: "with credential ID and DER bytes",
+			name: "with agent ID and DER bytes",
 			opts: Options{
-				CredentialID:  "test-credential",
+				AgentID:  "test-agent",
 				PrivateKeyDER: privateKeyToDER(key),
 			},
 			expectError: false,
 		},
 		{
-			name: "missing credential ID",
+			name: "missing agent ID",
 			opts: Options{
 				PrivateKeyPEM: pemData,
 			},
@@ -52,7 +52,7 @@ func TestNewClient(t *testing.T) {
 		{
 			name: "missing private key",
 			opts: Options{
-				CredentialID: "test-credential",
+				AgentID: "test-agent",
 			},
 			expectError: true,
 		},
@@ -74,8 +74,8 @@ func TestNewClient(t *testing.T) {
 				return
 			}
 			
-			if client.credentialID != tt.opts.CredentialID {
-				t.Errorf("Expected credential ID %q, got %q", tt.opts.CredentialID, client.credentialID)
+			if client.agentID != tt.opts.AgentID {
+				t.Errorf("Expected agent ID %q, got %q", tt.opts.AgentID, client.agentID)
 			}
 			
 			if client.baseURL != DefaultBaseURL {
@@ -107,10 +107,10 @@ func TestNewClientWithEnvironmentVariables(t *testing.T) {
 	tmpFile.Close()
 	
 	// Set environment variables
-	os.Setenv("TETHER_CREDENTIAL_ID", "env-credential")
+	os.Setenv("TETHER_AGENT_ID", "env-agent")
 	os.Setenv("TETHER_PRIVATE_KEY_PATH", tmpFile.Name())
 	defer func() {
-		os.Unsetenv("TETHER_CREDENTIAL_ID")
+		os.Unsetenv("TETHER_AGENT_ID")
 		os.Unsetenv("TETHER_PRIVATE_KEY_PATH")
 	}()
 	
@@ -120,8 +120,8 @@ func TestNewClientWithEnvironmentVariables(t *testing.T) {
 		t.Fatalf("Failed to create client with env vars: %v", err)
 	}
 	
-	if client.credentialID != "env-credential" {
-		t.Errorf("Expected credential ID from env var, got %q", client.credentialID)
+	if client.agentID != "env-agent" {
+		t.Errorf("Expected agent ID from env var, got %q", client.agentID)
 	}
 }
 
@@ -132,7 +132,7 @@ func TestClientSign(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 	}
 	
@@ -181,7 +181,7 @@ func TestClientRequestChallenge(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 		baseURL:      server.URL,
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
@@ -220,8 +220,8 @@ func TestClientSubmitProof(t *testing.T) {
 			t.Errorf("Expected challenge %q, got %q", "test-challenge", req.Challenge)
 		}
 		
-		if req.CredentialID != "test-credential" {
-			t.Errorf("Expected credential ID %q, got %q", "test-credential", req.CredentialID)
+		if req.AgentID != "test-agent" {
+			t.Errorf("Expected agent ID %q, got %q", "test-agent", req.AgentID)
 		}
 		
 		if req.Proof == "" {
@@ -248,7 +248,7 @@ func TestClientSubmitProof(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 		baseURL:      server.URL,
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
@@ -318,7 +318,7 @@ func TestClientVerify(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 		baseURL:      server.URL,
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
@@ -355,7 +355,7 @@ func TestClientErrorHandling(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 		baseURL:      "http://invalid-url-that-does-not-exist.local",
 		httpClient:   &http.Client{Timeout: 1 * time.Second},
@@ -396,7 +396,7 @@ func TestClientHTTPErrorCodes(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 		baseURL:      server.URL,
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
@@ -447,7 +447,7 @@ func TestClientVerificationFailure(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 		baseURL:      server.URL,
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
@@ -500,7 +500,7 @@ func TestClientContextCancellation(t *testing.T) {
 	}
 	
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		privateKey:   key,
 		baseURL:      server.URL,
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
@@ -521,7 +521,7 @@ func TestClientContextCancellation(t *testing.T) {
 }
 
 func TestNewClientWithApiKeyOnly(t *testing.T) {
-	// Should succeed with only an API key (no credential ID or private key)
+	// Should succeed with only an API key (no agent ID or private key)
 	client, err := NewClient(Options{
 		ApiKey: "test-api-key",
 	})
@@ -533,8 +533,8 @@ func TestNewClientWithApiKeyOnly(t *testing.T) {
 		t.Errorf("Expected apiKey %q, got %q", "test-api-key", client.apiKey)
 	}
 
-	if client.credentialID != "" {
-		t.Errorf("Expected empty credentialID, got %q", client.credentialID)
+	if client.agentID != "" {
+		t.Errorf("Expected empty agentID, got %q", client.agentID)
 	}
 
 	if client.privateKey != nil {
@@ -542,7 +542,7 @@ func TestNewClientWithApiKeyOnly(t *testing.T) {
 	}
 }
 
-func TestNewClientWithApiKeyAndCredential(t *testing.T) {
+func TestNewClientWithApiKeyAndAgent(t *testing.T) {
 	key, err := generateTestKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
@@ -550,7 +550,7 @@ func TestNewClientWithApiKeyAndCredential(t *testing.T) {
 
 	client, err := NewClient(Options{
 		ApiKey:        "test-api-key",
-		CredentialID:  "test-credential",
+		AgentID:  "test-agent",
 		PrivateKeyPEM: privateKeyToPEM(key),
 	})
 	if err != nil {
@@ -561,8 +561,8 @@ func TestNewClientWithApiKeyAndCredential(t *testing.T) {
 		t.Errorf("Expected apiKey %q, got %q", "test-api-key", client.apiKey)
 	}
 
-	if client.credentialID != "test-credential" {
-		t.Errorf("Expected credentialID %q, got %q", "test-credential", client.credentialID)
+	if client.agentID != "test-agent" {
+		t.Errorf("Expected agentID %q, got %q", "test-agent", client.agentID)
 	}
 
 	if client.privateKey == nil {
@@ -599,7 +599,7 @@ func TestSignRequiresPrivateKey(t *testing.T) {
 	}
 }
 
-func TestSubmitProofRequiresCredentialID(t *testing.T) {
+func TestSubmitProofRequiresAgentID(t *testing.T) {
 	client := &TetherClient{
 		apiKey:     "test-api-key",
 		httpClient: &http.Client{Timeout: 5 * time.Second},
@@ -608,11 +608,11 @@ func TestSubmitProofRequiresCredentialID(t *testing.T) {
 	ctx := context.Background()
 	_, err := client.SubmitProof(ctx, "challenge", "proof")
 	if err == nil {
-		t.Error("Expected error when submitting proof without credential ID")
+		t.Error("Expected error when submitting proof without agent ID")
 	}
 
-	if !strings.Contains(err.Error(), "credential ID is required") {
-		t.Errorf("Expected 'credential ID is required' error, got: %v", err)
+	if !strings.Contains(err.Error(), "agent ID is required") {
+		t.Errorf("Expected 'agent ID is required' error, got: %v", err)
 	}
 }
 
@@ -622,8 +622,8 @@ func TestCreateAgent(t *testing.T) {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
 
-		if r.URL.Path != "/credentials/issue" {
-			t.Errorf("Expected /credentials/issue path, got %s", r.URL.Path)
+		if r.URL.Path != "/agents/issue" {
+			t.Errorf("Expected /agents/issue path, got %s", r.URL.Path)
 		}
 
 		authHeader := r.Header.Get("Authorization")
@@ -631,7 +631,7 @@ func TestCreateAgent(t *testing.T) {
 			t.Errorf("Expected Authorization header %q, got %q", "Bearer test-api-key", authHeader)
 		}
 
-		var req issueCredentialRequest
+		var req issueAgentRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Errorf("Failed to decode request: %v", err)
 		}
@@ -644,7 +644,7 @@ func TestCreateAgent(t *testing.T) {
 			t.Errorf("Expected description %q, got %q", "Test agent", req.Description)
 		}
 
-		response := issueCredentialResponse{
+		response := issueAgentResponse{
 			ID:                "cred-123",
 			AgentName:         "my-agent",
 			Description:       "Test agent",
@@ -691,8 +691,8 @@ func TestListAgents(t *testing.T) {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
 
-		if r.URL.Path != "/credentials" {
-			t.Errorf("Expected /credentials path, got %s", r.URL.Path)
+		if r.URL.Path != "/agents" {
+			t.Errorf("Expected /agents path, got %s", r.URL.Path)
 		}
 
 		authHeader := r.Header.Get("Authorization")
@@ -754,8 +754,8 @@ func TestDeleteAgent(t *testing.T) {
 			t.Errorf("Expected DELETE request, got %s", r.Method)
 		}
 
-		if r.URL.Path != "/credentials/cred-123" {
-			t.Errorf("Expected /credentials/cred-123 path, got %s", r.URL.Path)
+		if r.URL.Path != "/agents/cred-123" {
+			t.Errorf("Expected /agents/cred-123 path, got %s", r.URL.Path)
 		}
 
 		authHeader := r.Header.Get("Authorization")
@@ -786,7 +786,7 @@ func TestDeleteAgent(t *testing.T) {
 
 func TestAgentMethodsRequireApiKey(t *testing.T) {
 	client := &TetherClient{
-		credentialID: "test-credential",
+		agentID: "test-agent",
 		httpClient:   &http.Client{Timeout: 5 * time.Second},
 	}
 
