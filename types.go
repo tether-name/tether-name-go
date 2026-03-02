@@ -74,6 +74,9 @@ type VerificationResult struct {
 	
 	// Email is the email address associated with the agent
 	Email string `json:"email,omitempty"`
+
+	// Domain is the verified domain associated with this agent (if assigned)
+	Domain string `json:"domain,omitempty"`
 	
 	// RegisteredSince is when this agent was first registered
 	RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
@@ -103,6 +106,7 @@ type verifyResponse struct {
 	VerifyURL       string     `json:"verifyUrl,omitempty"`
 	AgentName       string     `json:"agentName,omitempty"`
 	Email           string     `json:"email,omitempty"`
+	Domain          string     `json:"domain,omitempty"`
 	RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
 	Error           string     `json:"error,omitempty"`
 }
@@ -112,15 +116,28 @@ type Agent struct {
 	ID                string `json:"id"`
 	AgentName         string `json:"agentName"`
 	Description       string `json:"description"`
+	DomainID          string `json:"domainId,omitempty"`
+	Domain            string `json:"domain,omitempty"`
 	CreatedAt         int64  `json:"createdAt"`
 	RegistrationToken string `json:"registrationToken,omitempty"`
 	LastVerifiedAt    int64  `json:"lastVerifiedAt,omitempty"`
+}
+
+// Domain represents a registered domain under the authenticated account.
+type Domain struct {
+	ID            string `json:"id"`
+	Domain        string `json:"domain"`
+	Verified      bool   `json:"verified"`
+	VerifiedAt    int64  `json:"verifiedAt,omitempty"`
+	LastCheckedAt int64  `json:"lastCheckedAt,omitempty"`
+	CreatedAt     int64  `json:"createdAt,omitempty"`
 }
 
 // issueAgentRequest is the request payload for the /agents/issue endpoint
 type issueAgentRequest struct {
 	AgentName   string `json:"agentName"`
 	Description string `json:"description,omitempty"`
+	DomainID    string `json:"domainId,omitempty"`
 }
 
 // issueAgentResponse is the response payload from the /agents/issue endpoint
@@ -128,6 +145,7 @@ type issueAgentResponse struct {
 	ID                string `json:"id"`
 	AgentName         string `json:"agentName"`
 	Description       string `json:"description"`
+	DomainID          string `json:"domainId,omitempty"`
 	CreatedAt         int64  `json:"createdAt"`
 	RegistrationToken string `json:"registrationToken"`
 }
@@ -137,6 +155,9 @@ type listAgentEntry struct {
 	ID             string `json:"id"`
 	AgentName      string `json:"agentName"`
 	Description    string `json:"description"`
-	IssuedAt       int64  `json:"issuedAt"`
+	DomainID       string `json:"domainId,omitempty"`
+	Domain         string `json:"domain,omitempty"`
+	CreatedAt      int64  `json:"createdAt,omitempty"`
+	IssuedAt       int64  `json:"issuedAt,omitempty"`
 	LastVerifiedAt int64  `json:"lastVerifiedAt,omitempty"`
 }

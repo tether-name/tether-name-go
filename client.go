@@ -251,6 +251,7 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 		AgentName:       verifyResp.AgentName,
 		VerifyURL:       verifyResp.VerifyURL,
 		Email:           verifyResp.Email,
+		Domain:          verifyResp.Domain,
 		RegisteredSince: verifyResp.RegisteredSince,
 		Error:           verifyResp.Error,
 		Challenge:       challenge,
@@ -279,7 +280,8 @@ func (c *TetherClient) setAuthHeaders(req *http.Request) {
 
 // CreateAgent creates a new agent.
 // Requires an API key to be configured.
-func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, description string) (*Agent, error) {
+// domainID is optional. When provided, it assigns this agent to that verified domain.
+func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, description string, domainID ...string) (*Agent, error) {
 	if c.apiKey == "" {
 		return nil, &APIError{
 			Message: "API key is required for agent management",
@@ -292,6 +294,9 @@ func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, descri
 	issueReq := issueAgentRequest{
 		AgentName:   agentName,
 		Description: description,
+	}
+	if len(domainID) > 0 && domainID[0] != "" {
+		issueReq.DomainID = domainID[0]
 	}
 
 	reqBody, err := json.Marshal(issueReq)
@@ -343,6 +348,7 @@ func (c *TetherClient) CreateAgent(ctx context.Context, agentName string, descri
 		ID:                issueResp.ID,
 		AgentName:         issueResp.AgentName,
 		Description:       issueResp.Description,
+		DomainID:          issueResp.DomainID,
 		CreatedAt:         issueResp.CreatedAt,
 		RegistrationToken: issueResp.RegistrationToken,
 	}, nil
@@ -399,16 +405,74 @@ func (c *TetherClient) ListAgents(ctx context.Context) ([]Agent, error) {
 
 	agents := make([]Agent, len(entries))
 	for i, entry := range entries {
+		createdAt := entry.CreatedAt
+		if createdAt == 0 {
+			createdAt = entry.IssuedAt
+		}
 		agents[i] = Agent{
 			ID:             entry.ID,
 			AgentName:      entry.AgentName,
 			Description:    entry.Description,
-			CreatedAt:      entry.IssuedAt,
+			DomainID:       entry.DomainID,
+			Domain:         entry.Domain,
+			CreatedAt:      createdAt,
 			LastVerifiedAt: entry.LastVerifiedAt,
 		}
 	}
 
 	return agents, nil
+}
+
+// ListDomains lists all registered domains for the authenticated user.
+// Requires an API key to be configured.
+func (c *TetherClient) ListDomains(ctx context.Context) ([]Domain, error) {
+	if c.apiKey == "" {
+		return nil, &APIError{
+			Message: "API key is required for domain management",
+			Err:     ErrAPI,
+		}
+	}
+
+	url := c.baseURL + "/domains"
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, &APIError{
+			Message: "failed to create request",
+			Err:     err,
+		}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &APIError{
+			Message: "request failed",
+			Err:     err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+			Err:        ErrAPI,
+		}
+	}
+
+	var domains []Domain
+	if err := json.NewDecoder(resp.Body).Decode(&domains); err != nil {
+		return nil, &APIError{
+			Message: "failed to decode response",
+			Err:     err,
+		}
+	}
+
+	return domains, nil
 }
 
 // DeleteAgent deletes an agent by ID.

@@ -644,10 +644,15 @@ func TestCreateAgent(t *testing.T) {
 			t.Errorf("Expected description %q, got %q", "Test agent", req.Description)
 		}
 
+		if req.DomainID != "domain-123" {
+			t.Errorf("Expected domainId %q, got %q", "domain-123", req.DomainID)
+		}
+
 		response := issueAgentResponse{
 			ID:                "cred-123",
 			AgentName:         "my-agent",
 			Description:       "Test agent",
+			DomainID:          "domain-123",
 			CreatedAt:         1700000000000,
 			RegistrationToken: "reg-token-abc",
 		}
@@ -663,7 +668,7 @@ func TestCreateAgent(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	agent, err := client.CreateAgent(ctx, "my-agent", "Test agent")
+	agent, err := client.CreateAgent(ctx, "my-agent", "Test agent", "domain-123")
 	if err != nil {
 		t.Fatalf("Failed to create agent: %v", err)
 	}
@@ -678,6 +683,10 @@ func TestCreateAgent(t *testing.T) {
 
 	if agent.RegistrationToken != "reg-token-abc" {
 		t.Errorf("Expected RegistrationToken %q, got %q", "reg-token-abc", agent.RegistrationToken)
+	}
+
+	if agent.DomainID != "domain-123" {
+		t.Errorf("Expected DomainID %q, got %q", "domain-123", agent.DomainID)
 	}
 
 	if agent.CreatedAt != 1700000000000 {
