@@ -68,6 +68,19 @@ if err != nil {
 }
 fmt.Printf("Created agent: %s (ID: %s)\n", agent.AgentName, agent.ID)
 
+// Create an agent with a verified domain
+domains, err := client.ListDomains(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+if len(domains) > 0 && domains[0].Verified {
+    agent, err := client.CreateAgent(ctx, "my-bot", "My AI assistant", domains[0].ID)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Created agent with domain: %s\n", agent.AgentName)
+}
+
 // List all agents
 agents, err := client.ListAgents(ctx)
 if err != nil {
@@ -220,14 +233,17 @@ Signs a challenge using the client's private key. Returns URL-safe base64 signat
 #### `SubmitProof(ctx context.Context, challenge, proof string) (*VerificationResult, error)`
 Submits signed challenge proof for verification.
 
-#### `CreateAgent(ctx context.Context, agentName string, description string) (*Agent, error)`
-Creates a new agent. Requires an API key.
+#### `CreateAgent(ctx context.Context, agentName, description string, domainID ...string) (*Agent, error)`
+Creates a new agent. Optionally pass a verified domain ID. Requires an API key.
 
 #### `ListAgents(ctx context.Context) ([]Agent, error)`
 Lists all agents for the authenticated user. Requires an API key.
 
 #### `DeleteAgent(ctx context.Context, agentID string) (bool, error)`
 Deletes an agent by ID. Requires an API key.
+
+#### `ListDomains(ctx context.Context) ([]Domain, error)`
+Lists all registered domains for the authenticated user. Requires an API key.
 
 ### Types
 
@@ -241,6 +257,7 @@ Result returned by `Verify`, `RequestChallenge`, and `SubmitProof`.
 | `AgentName` | `string` | Registered agent name |
 | `VerifyURL` | `string` | Public verification URL |
 | `Email` | `string` | Registered owner email |
+| `Domain` | `string` | Verified domain (if assigned to this agent) |
 | `RegisteredSince` | `*EpochTime` | Registration timestamp |
 | `Error` | `string` | Error message if verification failed |
 | `Challenge` | `string` | The verified challenge code |
@@ -251,6 +268,7 @@ type VerificationResult struct {
     AgentName       string     `json:"agentName,omitempty"`
     VerifyURL       string     `json:"verifyUrl,omitempty"`
     Email           string     `json:"email,omitempty"`
+    Domain          string     `json:"domain,omitempty"`
     RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
     Error           string     `json:"error,omitempty"`
     Challenge       string     `json:"challenge,omitempty"`
@@ -266,6 +284,8 @@ Agent returned by management operations.
 | `ID` | `string` | Unique agent ID |
 | `AgentName` | `string` | Agent display name |
 | `Description` | `string` | Agent description |
+| `DomainID` | `string` | Assigned domain ID (if any) |
+| `Domain` | `string` | Assigned domain name (if any) |
 | `CreatedAt` | `int64` | Creation time (epoch ms) |
 | `RegistrationToken` | `string` | Token for key registration (returned on create) |
 | `LastVerifiedAt` | `int64` | Last verification time (epoch ms) |
@@ -275,9 +295,35 @@ type Agent struct {
     ID                string `json:"id"`
     AgentName         string `json:"agentName"`
     Description       string `json:"description"`
+    DomainID          string `json:"domainId,omitempty"`
+    Domain            string `json:"domain,omitempty"`
     CreatedAt         int64  `json:"createdAt"`
     RegistrationToken string `json:"registrationToken,omitempty"`
     LastVerifiedAt    int64  `json:"lastVerifiedAt,omitempty"`
+}
+```
+
+#### `Domain`
+
+Domain returned by `ListDomains`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ID` | `string` | Unique domain ID |
+| `Domain` | `string` | Domain name |
+| `Verified` | `bool` | Whether the domain is verified |
+| `VerifiedAt` | `int64` | Verification time (epoch ms) |
+| `LastCheckedAt` | `int64` | Last re-verification check (epoch ms) |
+| `CreatedAt` | `int64` | Creation time (epoch ms) |
+
+```go
+type Domain struct {
+    ID            string `json:"id"`
+    Domain        string `json:"domain"`
+    Verified      bool   `json:"verified"`
+    VerifiedAt    int64  `json:"verifiedAt,omitempty"`
+    LastCheckedAt int64  `json:"lastCheckedAt,omitempty"`
+    CreatedAt     int64  `json:"createdAt,omitempty"`
 }
 ```
 
