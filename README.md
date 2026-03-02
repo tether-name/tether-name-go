@@ -1,6 +1,6 @@
 # tether-go
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/tether-name/tether-name-go/v2.svg)](https://pkg.go.dev/github.com/tether-name/tether-name-go/v2/v2)
+[![Go Reference](https://pkg.go.dev/badge/github.com/tether-name/tether-name-go.svg)](https://pkg.go.dev/github.com/tether-name/tether-name-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tether-name/tether-name-go)](https://goreportcard.com/report/github.com/tether-name/tether-name-go)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -9,7 +9,7 @@ A Go client library for [Tether](https://tether.name) - cryptographic identity v
 ## Installation
 
 ```bash
-go get github.com/tether-name/tether-name-go/v2
+go get github.com/tether-name/tether-name-go
 ```
 
 ## Quick Start
@@ -22,7 +22,7 @@ import (
     "fmt"
     "log"
     
-    "github.com/tether-name/tether-name-go/v2"
+    "github.com/tether-name/tether-name-go"
 )
 
 func main() {
@@ -112,7 +112,7 @@ import (
     "fmt"
     "log"
     
-    "github.com/tether-name/tether-name-go/v2"
+    "github.com/tether-name/tether-name-go"
 )
 
 func main() {
@@ -371,11 +371,11 @@ Update the version in:
 1. Update the UserAgent version string above
 2. Commit and push to `main`
 3. Tag the release: `git tag v1.0.0 && git push --tags`
-4. The module is immediately available via `go get github.com/tether-name/tether-name-go/v2@v1.0.0`
+4. The module is immediately available via `go get github.com/tether-name/tether-name-go@v1.0.0`
 
 ## Links
 
 - 🌐 [Tether Website](https://tether.name)
 - 📘 [Documentation](https://docs.tether.name)
-- 📦 [pkg.go.dev](https://pkg.go.dev/github.com/tether-name/tether-name-go/v2/v2)
+- 📦 [pkg.go.dev](https://pkg.go.dev/github.com/tether-name/tether-name-go)
 - 💻 [GitHub](https://github.com/tether-name/tether-name-go)
