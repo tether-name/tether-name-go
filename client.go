@@ -15,18 +15,18 @@ import (
 const (
 	// DefaultBaseURL is the default Tether API base URL
 	DefaultBaseURL = "https://api.tether.name"
-	
+
 	// UserAgent for HTTP requests
 	UserAgent = "tether-go/1.0.5"
 )
 
 // TetherClient represents a client for the Tether API
 type TetherClient struct {
-	agentID string
-	privateKey   *rsa.PrivateKey
-	apiKey       string
-	baseURL      string
-	httpClient   *http.Client
+	agentID    string
+	privateKey *rsa.PrivateKey
+	apiKey     string
+	baseURL    string
+	httpClient *http.Client
 }
 
 // NewClient creates a new TetherClient with the given options.
@@ -77,12 +77,11 @@ func NewClient(opts Options) (*TetherClient, error) {
 		}
 	}
 
-
 	return &TetherClient{
-		agentID: agentID,
-		privateKey:   privateKey,
-		apiKey:       apiKey,
-		baseURL:      DefaultBaseURL,
+		agentID:    agentID,
+		privateKey: privateKey,
+		apiKey:     apiKey,
+		baseURL:    DefaultBaseURL,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -99,7 +98,7 @@ func (c *TetherClient) Verify(ctx context.Context) (*VerificationResult, error) 
 			Error:    err.Error(),
 		}, err
 	}
-	
+
 	// Sign challenge
 	proof, err := c.Sign(challenge)
 	if err != nil {
@@ -109,7 +108,7 @@ func (c *TetherClient) Verify(ctx context.Context) (*VerificationResult, error) 
 			Challenge: challenge,
 		}, err
 	}
-	
+
 	// Submit proof and return result
 	return c.SubmitProof(ctx, challenge, proof)
 }
@@ -117,7 +116,7 @@ func (c *TetherClient) Verify(ctx context.Context) (*VerificationResult, error) 
 // RequestChallenge requests a new challenge from the Tether API
 func (c *TetherClient) RequestChallenge(ctx context.Context) (string, error) {
 	url := c.baseURL + "/challenge"
-	
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
 	if err != nil {
 		return "", &APIError{
@@ -125,10 +124,10 @@ func (c *TetherClient) RequestChallenge(ctx context.Context) (string, error) {
 			Err:     err,
 		}
 	}
-	
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", UserAgent)
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", &APIError{
@@ -137,7 +136,7 @@ func (c *TetherClient) RequestChallenge(ctx context.Context) (string, error) {
 		}
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return "", &APIError{
 			StatusCode: resp.StatusCode,
@@ -145,7 +144,7 @@ func (c *TetherClient) RequestChallenge(ctx context.Context) (string, error) {
 			Err:        ErrAPI,
 		}
 	}
-	
+
 	var challengeResp challengeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&challengeResp); err != nil {
 		return "", &APIError{
@@ -153,14 +152,14 @@ func (c *TetherClient) RequestChallenge(ctx context.Context) (string, error) {
 			Err:     err,
 		}
 	}
-	
+
 	if challengeResp.Code == "" {
 		return "", &APIError{
 			Message: "empty challenge code received",
 			Err:     ErrAPI,
 		}
 	}
-	
+
 	return challengeResp.Code, nil
 }
 
@@ -197,11 +196,11 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 	url := c.baseURL + "/challenge/verify"
 
 	verifyReq := verifyRequest{
-		Challenge:    normalizeChallenge(challenge),
-		Proof:        proof,
-		AgentID: c.agentID,
+		Challenge: normalizeChallenge(challenge),
+		Proof:     proof,
+		AgentID:   c.agentID,
 	}
-	
+
 	reqBody, err := json.Marshal(verifyReq)
 	if err != nil {
 		return nil, &APIError{
@@ -209,7 +208,7 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 			Err:     err,
 		}
 	}
-	
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, &APIError{
@@ -217,10 +216,10 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 			Err:     err,
 		}
 	}
-	
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", UserAgent)
-	
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, &APIError{
@@ -229,7 +228,7 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 		}
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
@@ -237,7 +236,7 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 			Err:        ErrAPI,
 		}
 	}
-	
+
 	var verifyResp verifyResponse
 	if err := json.NewDecoder(resp.Body).Decode(&verifyResp); err != nil {
 		return nil, &APIError{
@@ -245,7 +244,7 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 			Err:     err,
 		}
 	}
-	
+
 	result := &VerificationResult{
 		Verified:        verifyResp.Valid,
 		AgentName:       verifyResp.AgentName,
@@ -256,7 +255,7 @@ func (c *TetherClient) SubmitProof(ctx context.Context, challenge, proof string)
 		Error:           verifyResp.Error,
 		Challenge:       challenge,
 	}
-	
+
 	if !verifyResp.Valid {
 		errorMsg := "verification failed"
 		if verifyResp.Error != "" {
@@ -517,4 +516,119 @@ func (c *TetherClient) DeleteAgent(ctx context.Context, agentID string) (bool, e
 	}
 
 	return true, nil
+}
+
+// ListAgentKeys lists key lifecycle entries for an agent.
+func (c *TetherClient) ListAgentKeys(ctx context.Context, agentID string) ([]AgentKey, error) {
+	if c.apiKey == "" {
+		return nil, &APIError{Message: "API key is required for agent management", Err: ErrAPI}
+	}
+
+	requestURL := c.baseURL + "/agents/" + url.PathEscape(agentID) + "/keys"
+	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
+	if err != nil {
+		return nil, &APIError{Message: "failed to create request", Err: err}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &APIError{Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &APIError{StatusCode: resp.StatusCode, Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode), Err: ErrAPI}
+	}
+
+	var keys []AgentKey
+	if err := json.NewDecoder(resp.Body).Decode(&keys); err != nil {
+		return nil, &APIError{Message: "failed to decode response", Err: err}
+	}
+
+	return keys, nil
+}
+
+// RotateAgentKey rotates an agent key with optional step-up auth.
+func (c *TetherClient) RotateAgentKey(ctx context.Context, agentID string, reqBody RotateAgentKeyRequest) (*RotateAgentKeyResponse, error) {
+	if c.apiKey == "" {
+		return nil, &APIError{Message: "API key is required for agent management", Err: ErrAPI}
+	}
+	if reqBody.PublicKey == "" {
+		return nil, &APIError{Message: "publicKey is required", Err: ErrAPI}
+	}
+
+	requestURL := c.baseURL + "/agents/" + url.PathEscape(agentID) + "/keys/rotate"
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, &APIError{Message: "failed to marshal request", Err: err}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", requestURL, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, &APIError{Message: "failed to create request", Err: err}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &APIError{Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &APIError{StatusCode: resp.StatusCode, Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode), Err: ErrAPI}
+	}
+
+	var out RotateAgentKeyResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, &APIError{Message: "failed to decode response", Err: err}
+	}
+
+	return &out, nil
+}
+
+// RevokeAgentKey revokes an agent key with optional step-up auth.
+func (c *TetherClient) RevokeAgentKey(ctx context.Context, agentID, keyID string, reqBody RevokeAgentKeyRequest) (*RevokeAgentKeyResponse, error) {
+	if c.apiKey == "" {
+		return nil, &APIError{Message: "API key is required for agent management", Err: ErrAPI}
+	}
+
+	requestURL := c.baseURL + "/agents/" + url.PathEscape(agentID) + "/keys/" + url.PathEscape(keyID) + "/revoke"
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, &APIError{Message: "failed to marshal request", Err: err}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", requestURL, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, &APIError{Message: "failed to create request", Err: err}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &APIError{Message: "request failed", Err: err}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &APIError{StatusCode: resp.StatusCode, Message: fmt.Sprintf("unexpected status code: %d", resp.StatusCode), Err: ErrAPI}
+	}
+
+	var out RevokeAgentKeyResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, &APIError{Message: "failed to decode response", Err: err}
+	}
+
+	return &out, nil
 }

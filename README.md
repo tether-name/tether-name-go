@@ -96,6 +96,33 @@ if err != nil {
     log.Fatal(err)
 }
 fmt.Printf("Deleted: %t\n", deleted)
+
+// List key lifecycle entries
+keys, err := client.ListAgentKeys(ctx, agent.ID)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Keys: %d\n", len(keys))
+
+// Rotate key (step-up required: stepUpCode OR challenge+proof)
+rotated, err := client.RotateAgentKey(ctx, agent.ID, tether.RotateAgentKeyRequest{
+    PublicKey:        "BASE64_SPKI_PUBLIC_KEY",
+    GracePeriodHours: 24,
+    Reason:           "routine_rotation",
+    StepUpCode:       "123456",
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Revoke a specific key
+_, err = client.RevokeAgentKey(ctx, agent.ID, rotated.NewKeyID, tether.RevokeAgentKeyRequest{
+    Reason:     "compromised",
+    StepUpCode: "654321",
+})
+if err != nil {
+    log.Fatal(err)
+}
 ```
 
 When using an API key, `AgentID` and private key options become optional — they're only needed for verify/sign operations.
@@ -245,6 +272,15 @@ Deletes an agent by ID. Requires an API key.
 #### `ListDomains(ctx context.Context) ([]Domain, error)`
 Lists all registered domains for the authenticated user. Requires an API key.
 
+#### `ListAgentKeys(ctx context.Context, agentID string) ([]AgentKey, error)`
+Lists key lifecycle entries (`active`, `grace`, `revoked`) for an agent. Requires an API key.
+
+#### `RotateAgentKey(ctx context.Context, agentID string, req RotateAgentKeyRequest) (*RotateAgentKeyResponse, error)`
+Rotates an agent key. Requires API key auth and step-up verification via either `StepUpCode` or `Challenge` + `Proof`.
+
+#### `RevokeAgentKey(ctx context.Context, agentID, keyID string, req RevokeAgentKeyRequest) (*RevokeAgentKeyResponse, error)`
+Revokes an agent key. Requires API key auth and step-up verification via either `StepUpCode` or `Challenge` + `Proof`.
+
 ### Types
 
 #### `VerificationResult`
@@ -324,6 +360,22 @@ type Domain struct {
     VerifiedAt    int64  `json:"verifiedAt,omitempty"`
     LastCheckedAt int64  `json:"lastCheckedAt,omitempty"`
     CreatedAt     int64  `json:"createdAt,omitempty"`
+}
+```
+
+#### `AgentKey`
+
+Key lifecycle entry returned by `ListAgentKeys`.
+
+```go
+type AgentKey struct {
+    ID            string `json:"id"`
+    Status        string `json:"status"` // active | grace | revoked
+    CreatedAt     int64  `json:"createdAt"`
+    ActivatedAt   int64  `json:"activatedAt"`
+    GraceUntil    int64  `json:"graceUntil"`
+    RevokedAt     int64  `json:"revokedAt"`
+    RevokedReason string `json:"revokedReason,omitempty"`
 }
 ```
 

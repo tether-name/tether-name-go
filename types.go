@@ -56,7 +56,6 @@ type Options struct {
 	// PrivateKeyDER contains the RSA private key in DER format as bytes
 	PrivateKeyDER []byte
 
-
 	// ApiKey for management operations (alternative to agent auth)
 	ApiKey string
 }
@@ -65,25 +64,25 @@ type Options struct {
 type VerificationResult struct {
 	// Verified indicates if the agent identity was successfully verified
 	Verified bool `json:"verified"`
-	
+
 	// AgentName is the registered name of the agent
 	AgentName string `json:"agentName,omitempty"`
-	
+
 	// VerifyURL is the public URL to verify this challenge result
 	VerifyURL string `json:"verifyUrl,omitempty"`
-	
+
 	// Email is the email address associated with the agent
 	Email string `json:"email,omitempty"`
 
 	// Domain is the verified domain associated with this agent (if assigned)
 	Domain string `json:"domain,omitempty"`
-	
+
 	// RegisteredSince is when this agent was first registered
 	RegisteredSince *EpochTime `json:"registeredSince,omitempty"`
-	
+
 	// Error contains any error message if verification failed
 	Error string `json:"error,omitempty"`
-	
+
 	// Challenge is the challenge code that was verified
 	Challenge string `json:"challenge,omitempty"`
 }
@@ -95,9 +94,9 @@ type challengeResponse struct {
 
 // VerifyRequest represents the request payload for challenge verification
 type verifyRequest struct {
-	Challenge    string `json:"challenge"`
-	Proof        string `json:"proof"`
-	AgentID string `json:"agentId"`
+	Challenge string `json:"challenge"`
+	Proof     string `json:"proof"`
+	AgentID   string `json:"agentId"`
 }
 
 // VerifyResponse represents the response from challenge verification
@@ -160,4 +159,51 @@ type listAgentEntry struct {
 	CreatedAt      int64  `json:"createdAt,omitempty"`
 	IssuedAt       int64  `json:"issuedAt,omitempty"`
 	LastVerifiedAt int64  `json:"lastVerifiedAt,omitempty"`
+}
+
+// AgentKey represents a key lifecycle entry for an agent.
+type AgentKey struct {
+	ID            string `json:"id"`
+	Status        string `json:"status"`
+	CreatedAt     int64  `json:"createdAt"`
+	ActivatedAt   int64  `json:"activatedAt"`
+	GraceUntil    int64  `json:"graceUntil"`
+	RevokedAt     int64  `json:"revokedAt"`
+	RevokedReason string `json:"revokedReason,omitempty"`
+}
+
+// RotateAgentKeyRequest defines payload for rotating an agent key.
+type RotateAgentKeyRequest struct {
+	PublicKey        string `json:"publicKey"`
+	GracePeriodHours int    `json:"gracePeriodHours,omitempty"`
+	Reason           string `json:"reason,omitempty"`
+	StepUpCode       string `json:"stepUpCode,omitempty"`
+	Challenge        string `json:"challenge,omitempty"`
+	Proof            string `json:"proof,omitempty"`
+}
+
+// RotateAgentKeyResponse is returned from key rotation endpoint.
+type RotateAgentKeyResponse struct {
+	AgentID       string `json:"agentId"`
+	PreviousKeyID string `json:"previousKeyId,omitempty"`
+	NewKeyID      string `json:"newKeyId"`
+	GraceUntil    int64  `json:"graceUntil"`
+	Message       string `json:"message"`
+}
+
+// RevokeAgentKeyRequest defines payload for revoking an agent key.
+type RevokeAgentKeyRequest struct {
+	Reason     string `json:"reason,omitempty"`
+	StepUpCode string `json:"stepUpCode,omitempty"`
+	Challenge  string `json:"challenge,omitempty"`
+	Proof      string `json:"proof,omitempty"`
+}
+
+// RevokeAgentKeyResponse is returned from key revoke endpoint.
+type RevokeAgentKeyResponse struct {
+	AgentID       string `json:"agentId"`
+	KeyID         string `json:"keyId"`
+	Revoked       bool   `json:"revoked"`
+	PromotedKeyID string `json:"promotedKeyId,omitempty"`
+	Message       string `json:"message"`
 }

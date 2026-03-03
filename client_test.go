@@ -18,9 +18,9 @@ func TestNewClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	pemData := privateKeyToPEM(key)
-	
+
 	tests := []struct {
 		name        string
 		opts        Options
@@ -29,7 +29,7 @@ func TestNewClient(t *testing.T) {
 		{
 			name: "with agent ID and PEM bytes",
 			opts: Options{
-				AgentID:  "test-agent",
+				AgentID:       "test-agent",
 				PrivateKeyPEM: pemData,
 			},
 			expectError: false,
@@ -37,7 +37,7 @@ func TestNewClient(t *testing.T) {
 		{
 			name: "with agent ID and DER bytes",
 			opts: Options{
-				AgentID:  "test-agent",
+				AgentID:       "test-agent",
 				PrivateKeyDER: privateKeyToDER(key),
 			},
 			expectError: false,
@@ -57,27 +57,27 @@ func TestNewClient(t *testing.T) {
 			expectError: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client, err := NewClient(tt.opts)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return
 			}
-			
+
 			if client.agentID != tt.opts.AgentID {
 				t.Errorf("Expected agent ID %q, got %q", tt.opts.AgentID, client.agentID)
 			}
-			
+
 			if client.baseURL != DefaultBaseURL {
 				t.Errorf("Expected base URL %q, got %q", DefaultBaseURL, client.baseURL)
 			}
@@ -91,21 +91,21 @@ func TestNewClientWithEnvironmentVariables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	pemData := privateKeyToPEM(key)
-	
+
 	// Create a temporary file for the private key
 	tmpFile, err := os.CreateTemp("", "test-key-*.pem")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
-	
+
 	if _, err := tmpFile.Write(pemData); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
 	tmpFile.Close()
-	
+
 	// Set environment variables
 	os.Setenv("TETHER_AGENT_ID", "env-agent")
 	os.Setenv("TETHER_PRIVATE_KEY_PATH", tmpFile.Name())
@@ -113,13 +113,13 @@ func TestNewClientWithEnvironmentVariables(t *testing.T) {
 		os.Unsetenv("TETHER_AGENT_ID")
 		os.Unsetenv("TETHER_PRIVATE_KEY_PATH")
 	}()
-	
+
 	// Create client with empty options (should use env vars)
 	client, err := NewClient(Options{})
 	if err != nil {
 		t.Fatalf("Failed to create client with env vars: %v", err)
 	}
-	
+
 	if client.agentID != "env-agent" {
 		t.Errorf("Expected agent ID from env var, got %q", client.agentID)
 	}
@@ -130,22 +130,22 @@ func TestClientSign(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
+		agentID:    "test-agent",
+		privateKey: key,
 	}
-	
+
 	challenge := "test-challenge"
 	proof, err := client.Sign(challenge)
 	if err != nil {
 		t.Fatalf("Failed to sign challenge: %v", err)
 	}
-	
+
 	if proof == "" {
 		t.Error("Proof is empty")
 	}
-	
+
 	// Verify the proof locally
 	err = verifySignature(&key.PublicKey, challenge, proof)
 	if err != nil {
@@ -159,40 +159,40 @@ func TestClientRequestChallenge(t *testing.T) {
 		if r.Method != "POST" {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
-		
+
 		if r.URL.Path != "/challenge" {
 			t.Errorf("Expected /challenge path, got %s", r.URL.Path)
 		}
-		
+
 		expectedUserAgent := UserAgent
 		if r.Header.Get("User-Agent") != expectedUserAgent {
 			t.Errorf("Expected User-Agent %q, got %q", expectedUserAgent, r.Header.Get("User-Agent"))
 		}
-		
+
 		response := challengeResponse{Code: "test-challenge-uuid"}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
-	
+
 	key, err := generateTestKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
-		baseURL:      server.URL,
-		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		agentID:    "test-agent",
+		privateKey: key,
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
-	
+
 	ctx := context.Background()
 	challenge, err := client.RequestChallenge(ctx)
 	if err != nil {
 		t.Fatalf("Failed to request challenge: %v", err)
 	}
-	
+
 	if challenge != "test-challenge-uuid" {
 		t.Errorf("Expected challenge %q, got %q", "test-challenge-uuid", challenge)
 	}
@@ -204,32 +204,33 @@ func TestClientSubmitProof(t *testing.T) {
 		if r.Method != "POST" {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
-		
+
 		if r.URL.Path != "/challenge/verify" {
 			t.Errorf("Expected /challenge/verify path, got %s", r.URL.Path)
 		}
-		
+
 		// Parse request body
 		var req verifyRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Errorf("Failed to decode request: %v", err)
 		}
-		
+
 		// Check request fields
 		if req.Challenge != "test-challenge" {
 			t.Errorf("Expected challenge %q, got %q", "test-challenge", req.Challenge)
 		}
-		
+
 		if req.AgentID != "test-agent" {
 			t.Errorf("Expected agent ID %q, got %q", "test-agent", req.AgentID)
 		}
-		
+
 		if req.Proof == "" {
 			t.Error("Proof is empty")
 		}
-		
+
 		// Send success response
-		t0 := time.Now().Add(-30 * 24 * time.Hour); registeredSince := &EpochTime{t0} // 30 days ago
+		t0 := time.Now().Add(-30 * 24 * time.Hour)
+		registeredSince := &EpochTime{t0} // 30 days ago
 		response := verifyResponse{
 			Valid:           true,
 			VerifyURL:       "https://tether.name/check?challenge=test-challenge",
@@ -241,40 +242,40 @@ func TestClientSubmitProof(t *testing.T) {
 		json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
-	
+
 	key, err := generateTestKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
-		baseURL:      server.URL,
-		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		agentID:    "test-agent",
+		privateKey: key,
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
-	
+
 	ctx := context.Background()
 	challenge := "test-challenge"
 	proof := "test-proof"
-	
+
 	result, err := client.SubmitProof(ctx, challenge, proof)
 	if err != nil {
 		t.Fatalf("Failed to submit proof: %v", err)
 	}
-	
+
 	if !result.Verified {
 		t.Error("Expected verification to succeed")
 	}
-	
+
 	if result.AgentName != "Test Agent" {
 		t.Errorf("Expected agent name %q, got %q", "Test Agent", result.AgentName)
 	}
-	
+
 	if result.Email != "test@example.com" {
 		t.Errorf("Expected email %q, got %q", "test@example.com", result.Email)
 	}
-	
+
 	if result.Challenge != challenge {
 		t.Errorf("Expected challenge %q, got %q", challenge, result.Challenge)
 	}
@@ -296,7 +297,8 @@ func TestClientVerify(t *testing.T) {
 
 		case "/challenge/verify":
 			proofSubmitted.Store(true)
-			t0 := time.Now().Add(-30 * 24 * time.Hour); registeredSince := &EpochTime{t0}
+			t0 := time.Now().Add(-30 * 24 * time.Hour)
+			registeredSince := &EpochTime{t0}
 			response := verifyResponse{
 				Valid:           true,
 				VerifyURL:       "https://tether.name/check?challenge=test-challenge-uuid",
@@ -305,31 +307,31 @@ func TestClientVerify(t *testing.T) {
 				RegisteredSince: registeredSince,
 			}
 			json.NewEncoder(w).Encode(response)
-			
+
 		default:
 			t.Errorf("Unexpected path: %s", r.URL.Path)
 		}
 	}))
 	defer server.Close()
-	
+
 	key, err := generateTestKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
-		baseURL:      server.URL,
-		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		agentID:    "test-agent",
+		privateKey: key,
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
-	
+
 	ctx := context.Background()
 	result, err := client.Verify(ctx)
 	if err != nil {
 		t.Fatalf("Failed to verify: %v", err)
 	}
-	
+
 	if !challengeRequested.Load() {
 		t.Error("Challenge was not requested")
 	}
@@ -337,11 +339,11 @@ func TestClientVerify(t *testing.T) {
 	if !proofSubmitted.Load() {
 		t.Error("Proof was not submitted")
 	}
-	
+
 	if !result.Verified {
 		t.Error("Expected verification to succeed")
 	}
-	
+
 	if result.AgentName != "Test Agent" {
 		t.Errorf("Expected agent name %q, got %q", "Test Agent", result.AgentName)
 	}
@@ -353,28 +355,28 @@ func TestClientErrorHandling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
-		baseURL:      "http://invalid-url-that-does-not-exist.local",
-		httpClient:   &http.Client{Timeout: 1 * time.Second},
+		agentID:    "test-agent",
+		privateKey: key,
+		baseURL:    "http://invalid-url-that-does-not-exist.local",
+		httpClient: &http.Client{Timeout: 1 * time.Second},
 	}
-	
+
 	ctx := context.Background()
-	
+
 	// Test RequestChallenge error
 	_, err = client.RequestChallenge(ctx)
 	if err == nil {
 		t.Error("Expected error for invalid URL")
 	}
-	
+
 	// Test SubmitProof error
 	_, err = client.SubmitProof(ctx, "challenge", "proof")
 	if err == nil {
 		t.Error("Expected error for invalid URL")
 	}
-	
+
 	// Test Verify error
 	_, err = client.Verify(ctx)
 	if err == nil {
@@ -389,27 +391,27 @@ func TestClientHTTPErrorCodes(t *testing.T) {
 		w.Write([]byte("Bad Request"))
 	}))
 	defer server.Close()
-	
+
 	key, err := generateTestKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
-		baseURL:      server.URL,
-		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		agentID:    "test-agent",
+		privateKey: key,
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
-	
+
 	ctx := context.Background()
-	
+
 	// Test RequestChallenge with error code
 	_, err = client.RequestChallenge(ctx)
 	if err == nil {
 		t.Error("Expected error for HTTP 400")
 	}
-	
+
 	apiErr, ok := err.(*APIError)
 	if !ok {
 		t.Errorf("Expected APIError, got %T", err)
@@ -422,63 +424,63 @@ func TestClientVerificationFailure(t *testing.T) {
 	// Create a mock server that returns verification failure
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		
+
 		switch r.URL.Path {
 		case "/challenge":
 			response := challengeResponse{Code: "test-challenge-uuid"}
 			json.NewEncoder(w).Encode(response)
-			
+
 		case "/challenge/verify":
 			response := verifyResponse{
 				Valid: false,
 				Error: "Invalid signature",
 			}
 			json.NewEncoder(w).Encode(response)
-			
+
 		default:
 			t.Errorf("Unexpected path: %s", r.URL.Path)
 		}
 	}))
 	defer server.Close()
-	
+
 	key, err := generateTestKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
-		baseURL:      server.URL,
-		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		agentID:    "test-agent",
+		privateKey: key,
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
-	
+
 	ctx := context.Background()
 	result, err := client.Verify(ctx)
-	
+
 	// Should return error for failed verification
 	if err == nil {
 		t.Error("Expected error for failed verification")
 	}
-	
+
 	verifyErr, ok := err.(*VerificationError)
 	if !ok {
 		t.Errorf("Expected VerificationError, got %T", err)
 	}
-	
+
 	// Result should still be returned
 	if result == nil {
 		t.Fatal("Expected result even for failed verification")
 	}
-	
+
 	if result.Verified {
 		t.Error("Expected verification to fail")
 	}
-	
+
 	if !strings.Contains(result.Error, "Invalid signature") {
 		t.Errorf("Expected error message to contain 'Invalid signature', got %q", result.Error)
 	}
-	
+
 	if !strings.Contains(verifyErr.Message, "Invalid signature") {
 		t.Errorf("Expected error message to contain 'Invalid signature', got %q", verifyErr.Message)
 	}
@@ -493,28 +495,28 @@ func TestClientContextCancellation(t *testing.T) {
 		json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
-	
+
 	key, err := generateTestKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to generate test key pair: %v", err)
 	}
-	
+
 	client := &TetherClient{
-		agentID: "test-agent",
-		privateKey:   key,
-		baseURL:      server.URL,
-		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		agentID:    "test-agent",
+		privateKey: key,
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
-	
+
 	// Create context that cancels quickly
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	
+
 	_, err = client.RequestChallenge(ctx)
 	if err == nil {
 		t.Error("Expected error for cancelled context")
 	}
-	
+
 	if !strings.Contains(err.Error(), "context") {
 		t.Errorf("Expected context-related error, got: %v", err)
 	}
@@ -550,7 +552,7 @@ func TestNewClientWithApiKeyAndAgent(t *testing.T) {
 
 	client, err := NewClient(Options{
 		ApiKey:        "test-api-key",
-		AgentID:  "test-agent",
+		AgentID:       "test-agent",
 		PrivateKeyPEM: privateKeyToPEM(key),
 	})
 	if err != nil {
@@ -795,8 +797,8 @@ func TestDeleteAgent(t *testing.T) {
 
 func TestAgentMethodsRequireApiKey(t *testing.T) {
 	client := &TetherClient{
-		agentID: "test-agent",
-		httpClient:   &http.Client{Timeout: 5 * time.Second},
+		agentID:    "test-agent",
+		httpClient: &http.Client{Timeout: 5 * time.Second},
 	}
 
 	ctx := context.Background()
@@ -856,5 +858,111 @@ func TestDeleteAgentHTTPError(t *testing.T) {
 		t.Errorf("Expected APIError, got %T", err)
 	} else if apiErr.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, apiErr.StatusCode)
+	}
+}
+func TestListAgentKeys(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			t.Errorf("Expected GET request, got %s", r.Method)
+		}
+		if r.URL.Path != "/agents/agent-123/keys" {
+			t.Errorf("Expected /agents/agent-123/keys path, got %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-api-key" {
+			t.Errorf("Expected Authorization header, got %q", r.Header.Get("Authorization"))
+		}
+
+		response := []AgentKey{{
+			ID: "key-1", Status: "active", CreatedAt: 1, ActivatedAt: 1, GraceUntil: 0, RevokedAt: 0,
+		}}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &TetherClient{apiKey: "test-api-key", baseURL: server.URL, httpClient: &http.Client{Timeout: 5 * time.Second}}
+	keys, err := client.ListAgentKeys(context.Background(), "agent-123")
+	if err != nil {
+		t.Fatalf("ListAgentKeys failed: %v", err)
+	}
+	if len(keys) != 1 || keys[0].ID != "key-1" {
+		t.Fatalf("Unexpected keys: %+v", keys)
+	}
+}
+
+func TestRotateAndRevokeAgentKey(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/agents/agent-123/keys/rotate":
+			if r.Method != "POST" {
+				t.Errorf("Expected POST rotate, got %s", r.Method)
+			}
+			var req RotateAgentKeyRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode rotate: %v", err)
+			}
+			if req.PublicKey == "" || req.StepUpCode != "123456" {
+				t.Fatalf("unexpected rotate payload: %+v", req)
+			}
+			json.NewEncoder(w).Encode(RotateAgentKeyResponse{
+				AgentID: "agent-123", PreviousKeyID: "key-old", NewKeyID: "key-new", GraceUntil: 999, Message: "ok",
+			})
+		case "/agents/agent-123/keys/key-new/revoke":
+			if r.Method != "POST" {
+				t.Errorf("Expected POST revoke, got %s", r.Method)
+			}
+			var req RevokeAgentKeyRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode revoke: %v", err)
+			}
+			if req.Reason != "compromised" || req.Challenge != "c1" || req.Proof != "p1" {
+				t.Fatalf("unexpected revoke payload: %+v", req)
+			}
+			json.NewEncoder(w).Encode(RevokeAgentKeyResponse{
+				AgentID: "agent-123", KeyID: "key-new", Revoked: true, PromotedKeyID: "key-old", Message: "revoked",
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := &TetherClient{apiKey: "test-api-key", baseURL: server.URL, httpClient: &http.Client{Timeout: 5 * time.Second}}
+	ctx := context.Background()
+
+	rotated, err := client.RotateAgentKey(ctx, "agent-123", RotateAgentKeyRequest{
+		PublicKey: "BASE64_KEY", GracePeriodHours: 24, StepUpCode: "123456",
+	})
+	if err != nil {
+		t.Fatalf("RotateAgentKey failed: %v", err)
+	}
+	if rotated.NewKeyID != "key-new" {
+		t.Fatalf("unexpected rotate response: %+v", rotated)
+	}
+
+	revoked, err := client.RevokeAgentKey(ctx, "agent-123", "key-new", RevokeAgentKeyRequest{
+		Reason: "compromised", Challenge: "c1", Proof: "p1",
+	})
+	if err != nil {
+		t.Fatalf("RevokeAgentKey failed: %v", err)
+	}
+	if !revoked.Revoked || revoked.PromotedKeyID != "key-old" {
+		t.Fatalf("unexpected revoke response: %+v", revoked)
+	}
+}
+
+func TestKeyLifecycleMethodsRequireAPIKey(t *testing.T) {
+	client := &TetherClient{httpClient: &http.Client{Timeout: 5 * time.Second}}
+	ctx := context.Background()
+
+	if _, err := client.ListAgentKeys(ctx, "agent-1"); err == nil {
+		t.Fatal("expected ListAgentKeys error without API key")
+	}
+	if _, err := client.RotateAgentKey(ctx, "agent-1", RotateAgentKeyRequest{PublicKey: "k"}); err == nil {
+		t.Fatal("expected RotateAgentKey error without API key")
+	}
+	if _, err := client.RevokeAgentKey(ctx, "agent-1", "key-1", RevokeAgentKeyRequest{}); err == nil {
+		t.Fatal("expected RevokeAgentKey error without API key")
 	}
 }
