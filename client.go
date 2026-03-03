@@ -17,7 +17,7 @@ const (
 	DefaultBaseURL = "https://api.tether.name"
 
 	// UserAgent for HTTP requests
-	UserAgent = "tether-go/1.0.5"
+	UserAgent = "tether-go/1.0.7"
 )
 
 // TetherClient represents a client for the Tether API
