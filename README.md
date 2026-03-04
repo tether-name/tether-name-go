@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/tether-name/tether-name-go)](https://goreportcard.com/report/github.com/tether-name/tether-name-go)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A Go client library for [Tether](https://tether.name) - cryptographic identity verification for AI agents. Tether lets AI agents prove their identity using RSA digital signatures, and manage agents programmatically with API keys.
+A Go client library for [Tether](https://tether.name) - cryptographic identity verification for AI agents. Tether lets AI agents prove their identity using RSA digital signatures, and manage agents programmatically with bearer auth (JWT or API keys).
 
 ## Installation
 
@@ -49,7 +49,7 @@ func main() {
 
 ## Agent Management
 
-Use an API key to create, list, and delete agents programmatically:
+Use a bearer token (`Authorization: Bearer ...`, JWT or API key) to create, list, and delete agents programmatically:
 
 ```go
 client, err := tether.NewClient(tether.Options{
@@ -125,7 +125,7 @@ if err != nil {
 }
 ```
 
-When using an API key, `AgentID` and private key options become optional — they're only needed for verify/sign operations.
+When using a bearer token in `ApiKey` (JWT or API key), `AgentID` and private key options become optional — they're only needed for verify/sign operations.
 
 ## Step-by-Step Verification
 
@@ -240,11 +240,11 @@ client, err := tether.NewClient(tether.Options{})
 Creates a new Tether client with the specified options.
 
 **Options:**
-- `AgentID` (string): Your unique agent agent ID (required for verify/sign, optional with API key)
+- `AgentID` (string): Your unique agent ID (required for verify/sign, optional with bearer token)
 - `PrivateKeyPath` (string): Path to RSA private key file (PEM or DER format)
 - `PrivateKeyPEM` ([]byte): RSA private key in PEM format
 - `PrivateKeyDER` ([]byte): RSA private key in DER format
-- `ApiKey` (string): API key for agent management (falls back to `TETHER_API_KEY` env var)
+- `ApiKey` (string): Management bearer token (JWT or API key; falls back to `TETHER_API_KEY` env var)
 
 ### Client Methods
 
@@ -261,25 +261,25 @@ Signs a challenge using the client's private key. Returns URL-safe base64 signat
 Submits signed challenge proof for verification.
 
 #### `CreateAgent(ctx context.Context, agentName, description string, domainID ...string) (*Agent, error)`
-Creates a new agent. Optionally pass a verified domain ID. Requires an API key.
+Creates a new agent. Optionally pass a verified domain ID. Requires bearer auth (JWT or API key).
 
 #### `ListAgents(ctx context.Context) ([]Agent, error)`
-Lists all agents for the authenticated user. Requires an API key.
+Lists all agents for the authenticated user. Requires bearer auth (JWT or API key).
 
 #### `DeleteAgent(ctx context.Context, agentID string) (bool, error)`
-Deletes an agent by ID. Requires an API key.
+Deletes an agent by ID. Requires bearer auth (JWT or API key).
 
 #### `ListDomains(ctx context.Context) ([]Domain, error)`
-Lists all registered domains for the authenticated user. Requires an API key.
+Lists all registered domains for the authenticated user. Requires bearer auth (JWT or API key).
 
 #### `ListAgentKeys(ctx context.Context, agentID string) ([]AgentKey, error)`
-Lists key lifecycle entries (`active`, `grace`, `revoked`) for an agent. Requires an API key.
+Lists key lifecycle entries (`active`, `grace`, `revoked`) for an agent. Requires bearer auth (JWT or API key).
 
 #### `RotateAgentKey(ctx context.Context, agentID string, req RotateAgentKeyRequest) (*RotateAgentKeyResponse, error)`
-Rotates an agent key. Requires API key auth and step-up verification via either `StepUpCode` or `Challenge` + `Proof`.
+Rotates an agent key. Requires bearer auth (JWT or API key) and step-up verification via either `StepUpCode` or `Challenge` + `Proof`.
 
 #### `RevokeAgentKey(ctx context.Context, agentID, keyID string, req RevokeAgentKeyRequest) (*RevokeAgentKeyResponse, error)`
-Revokes an agent key. Requires API key auth and step-up verification via either `StepUpCode` or `Challenge` + `Proof`.
+Revokes an agent key. Requires bearer auth (JWT or API key) and step-up verification via either `StepUpCode` or `Challenge` + `Proof`.
 
 ### Types
 
@@ -388,7 +388,7 @@ The library provides custom error types for different failure scenarios:
 
 ## How Tether Works
 
-1. **Registration**: Register your AI agent at [tether.name](https://tether.name) to get a agent ID and generate an RSA key pair
+1. **Registration**: Register your AI agent at [tether.name](https://tether.name) to get an agent ID, then generate an RSA key pair locally and register the public key
 2. **Challenge**: Request a unique challenge code from the Tether API
 3. **Signature**: Sign the challenge with your private key using SHA256withRSA
 4. **Verification**: Submit the challenge and signature for verification
