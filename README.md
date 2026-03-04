@@ -49,7 +49,7 @@ func main() {
 
 ## Agent Management
 
-Use a bearer token (`Authorization: Bearer ...`, JWT or API key) to create, list, and delete agents programmatically:
+Use a bearer token (`Authorization: Bearer ...`, JWT or API key) to create, update, list, and delete agents programmatically:
 
 ```go
 client, err := tether.NewClient(tether.Options{
@@ -88,6 +88,18 @@ if err != nil {
 }
 for _, a := range agents {
     fmt.Printf("  %s (%s)\n", a.AgentName, a.ID)
+}
+
+// Update which identity is shown when this agent is verified
+// Pass a verified domain ID to show that domain:
+_, err = client.UpdateAgentDomain(ctx, agent.ID, "verified-domain-id")
+if err != nil {
+    log.Fatal(err)
+}
+// Pass empty string to show account email:
+_, err = client.UpdateAgentDomain(ctx, agent.ID, "")
+if err != nil {
+    log.Fatal(err)
 }
 
 // Delete an agent
@@ -268,6 +280,9 @@ Lists all agents for the authenticated user. Requires bearer auth (JWT or API ke
 
 #### `DeleteAgent(ctx context.Context, agentID string) (bool, error)`
 Deletes an agent by ID. Requires bearer auth (JWT or API key).
+
+#### `UpdateAgentDomain(ctx context.Context, agentID string, domainID string) (*UpdateAgentResponse, error)`
+Updates which identity is shown when an agent is verified. Pass a verified `domainID` to show that domain, or pass `""` (empty string) to show account email. Requires bearer auth (JWT or API key).
 
 #### `ListDomains(ctx context.Context) ([]Domain, error)`
 Lists all registered domains for the authenticated user. Requires bearer auth (JWT or API key).

@@ -149,6 +149,19 @@ type issueAgentResponse struct {
 	RegistrationToken string `json:"registrationToken"`
 }
 
+// updateAgentRequest is the request payload for PATCH /agents/{id}
+type updateAgentRequest struct {
+	DomainID string `json:"domainId"`
+}
+
+// UpdateAgentResponse is the response payload for PATCH /agents/{id}
+type UpdateAgentResponse struct {
+	ID       string `json:"id"`
+	DomainID string `json:"domainId,omitempty"`
+	Domain   string `json:"domain,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
 // listAgentEntry is the API response shape for /agents, where createdAt is "issuedAt"
 type listAgentEntry struct {
 	ID             string `json:"id"`

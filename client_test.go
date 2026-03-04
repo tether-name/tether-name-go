@@ -795,6 +795,60 @@ func TestDeleteAgent(t *testing.T) {
 	}
 }
 
+func TestUpdateAgentDomain(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PATCH" {
+			t.Errorf("Expected PATCH request, got %s", r.Method)
+		}
+
+		if r.URL.Path != "/agents/cred-123" {
+			t.Errorf("Expected /agents/cred-123 path, got %s", r.URL.Path)
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "Bearer test-api-key" {
+			t.Errorf("Expected Authorization header %q, got %q", "Bearer test-api-key", authHeader)
+		}
+
+		var req updateAgentRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("Failed to decode request: %v", err)
+		}
+		if req.DomainID != "domain-123" {
+			t.Errorf("Expected domainId %q, got %q", "domain-123", req.DomainID)
+		}
+
+		response := UpdateAgentResponse{
+			ID:       "cred-123",
+			DomainID: "domain-123",
+			Domain:   "example.com",
+			Message:  "updated",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &TetherClient{
+		apiKey:     "test-api-key",
+		baseURL:    server.URL,
+		httpClient: &http.Client{Timeout: 5 * time.Second},
+	}
+
+	ctx := context.Background()
+	updated, err := client.UpdateAgentDomain(ctx, "cred-123", "domain-123")
+	if err != nil {
+		t.Fatalf("Failed to update agent domain: %v", err)
+	}
+
+	if updated.DomainID != "domain-123" {
+		t.Errorf("Expected DomainID %q, got %q", "domain-123", updated.DomainID)
+	}
+	if updated.Domain != "example.com" {
+		t.Errorf("Expected Domain %q, got %q", "example.com", updated.Domain)
+	}
+}
+
 func TestAgentMethodsRequireApiKey(t *testing.T) {
 	client := &TetherClient{
 		agentID:    "test-agent",
@@ -825,6 +879,15 @@ func TestAgentMethodsRequireApiKey(t *testing.T) {
 	_, err = client.DeleteAgent(ctx, "cred-123")
 	if err == nil {
 		t.Error("Expected error for DeleteAgent without API key")
+	}
+	if !strings.Contains(err.Error(), "API key is required") {
+		t.Errorf("Expected 'API key is required' error, got: %v", err)
+	}
+
+	// UpdateAgentDomain
+	_, err = client.UpdateAgentDomain(ctx, "cred-123", "domain-123")
+	if err == nil {
+		t.Error("Expected error for UpdateAgentDomain without API key")
 	}
 	if !strings.Contains(err.Error(), "API key is required") {
 		t.Errorf("Expected 'API key is required' error, got: %v", err)

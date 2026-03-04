@@ -518,6 +518,65 @@ func (c *TetherClient) DeleteAgent(ctx context.Context, agentID string) (bool, e
 	return true, nil
 }
 
+// UpdateAgentDomain updates which identity is shown when an agent is verified.
+// Pass a verified domainID to show that domain, or pass an empty string to show account email.
+func (c *TetherClient) UpdateAgentDomain(ctx context.Context, agentID string, domainID string) (*UpdateAgentResponse, error) {
+	if c.apiKey == "" {
+		return nil, &APIError{
+			Message: "API key is required for agent management",
+			Err:     ErrAPI,
+		}
+	}
+
+	requestURL := c.baseURL + "/agents/" + url.PathEscape(agentID)
+	payload, err := json.Marshal(updateAgentRequest{DomainID: domainID})
+	if err != nil {
+		return nil, &APIError{
+			Message: "failed to marshal request",
+			Err:     err,
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PATCH", requestURL, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, &APIError{
+			Message: "failed to create request",
+			Err:     err,
+		}
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", UserAgent)
+	c.setAuthHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &APIError{
+			Message: "request failed",
+			Err:     err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+			Err:        ErrAPI,
+		}
+	}
+
+	var out UpdateAgentResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, &APIError{
+			Message: "failed to decode response",
+			Err:     err,
+		}
+	}
+
+	return &out, nil
+}
+
 // ListAgentKeys lists key lifecycle entries for an agent.
 func (c *TetherClient) ListAgentKeys(ctx context.Context, agentID string) ([]AgentKey, error) {
 	if c.apiKey == "" {
